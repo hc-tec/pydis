@@ -1,6 +1,7 @@
 
 import argparse
 from IOLoop.Reactor import ReReactor
+from Server import server
 
 
 def parse_args():

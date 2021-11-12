@@ -1,6 +1,4 @@
 
-from enum import Enum
-
 
 class ReEvent:
     RE_NONE = 0

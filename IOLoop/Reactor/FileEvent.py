@@ -21,18 +21,20 @@ class FileEvent:
             try:
                 d = self.client_sock.recv(4096).decode("utf-8")
                 if not d and not data:
-                    return False
+                    return
                 data += d
             except sock_error as e:
                 if e.errno == errno.EAGAIN:
                     break
                 else:
                     print(e)
-                    return False
+                    return
+            except UnicodeDecodeError as e:
+                pass
         print(data)
 
     def write(self):
-        data = "message: {0}\nresponse: {1}"
+        data = "【Server】: Send\n"
         data = bytearray(data, "utf-8")
         sendlen = 0
         try:
