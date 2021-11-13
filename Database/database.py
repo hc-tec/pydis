@@ -7,4 +7,10 @@ class Database:
         self.blocking_keys = {}
         self.ready_keys = {}
         self.watch_keys = {}
+
+    def store(self, key, value):
+        self.dict[key] = value
+    
+    def withdraw(self, key):
+        return self.dict.get(key)
     
