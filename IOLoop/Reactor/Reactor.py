@@ -40,7 +40,7 @@ class Reactor:
             fired_event = self.fired[fd]
 
             if fd == listen_fd:
-                self.__acceptor.accept()
+                self.__acceptor.handle_accept()
 
             elif event & select.EPOLLIN:
                 self.__acceptor.handle_read(fired_event)

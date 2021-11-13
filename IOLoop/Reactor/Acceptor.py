@@ -5,6 +5,7 @@ import select
 # from IOLoop.Reactor.Reactor import Reactor
 from IOLoop.Reactor.FileEvent import FileEvent
 from IOLoop.Reactor.FiredEvent import FiredEvent
+from Server import server
 
 
 class Acceptor:
@@ -28,7 +29,7 @@ class Acceptor:
     def listen_fd(self):
         return self.__socket.fileno()
 
-    def accept(self):
+    def handle_accept(self):
         conn, addr = self.__socket.accept()
         conn.setblocking(False)
         conn_fd = conn.fileno()
@@ -36,14 +37,14 @@ class Acceptor:
         self.reactor.events[conn_fd] = file_event
         self.reactor.poller.register(conn_fd, select.EPOLLIN)
 
+        server.connect_from_client(conn)
+
     def handle_read(self, fired_event: FiredEvent):
-        file_event = self.reactor.events[fired_event.fd]
-        file_event.read()
+        server.read_from_client(fired_event.fd)
         self.reactor.poller.modify(fired_event.fd, select.EPOLLOUT)
 
     def handle_write(self, fired_event: FiredEvent):
-        file_event = self.reactor.events[fired_event.fd]
-        file_event.write()
+        server.write_to_client(fired_event.fd)
         self.reactor.poller.modify(fired_event.fd, select.EPOLLIN)
 
     def handle_close(self, fired_event: FiredEvent):
