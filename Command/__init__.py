@@ -1,2 +1,3 @@
 
-from .base import BaseCommand, CommandHandler
+from .base import BaseCommand
+from .handler import CommandHandler

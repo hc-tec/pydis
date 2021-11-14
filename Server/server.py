@@ -30,6 +30,8 @@ class Server:
         # Limits
         self.max_clients = 1000
 
+        self.create_databases()
+
     def create_databases(self):
         for i in range(self.db_num):
             self.__databases.append(Database(i))

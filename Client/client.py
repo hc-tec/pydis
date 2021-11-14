@@ -36,6 +36,9 @@ class Client:
             data = self.reply_buffer.pop()
             self.conn.handle_write(data)
 
+    def append_reply(self, reply):
+        self.reply_buffer.append(reply)
+
     def handle_command(self):
         handler = CommandHandler(self)
-        handler.parse_command()
+        handler.handle()
