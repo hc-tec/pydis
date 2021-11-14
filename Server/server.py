@@ -1,12 +1,13 @@
 
-from typing import Dict
+from typing import Dict, List
 
 from socket import socket
 from Client import Client
 from Connection import Connection
+from Database import Database
 
 
-class ReServer:
+class Server:
 
     def __init__(self):
         self.__next_client_id = 1
@@ -15,6 +16,10 @@ class ReServer:
         self.__slaves = []
         self.__monitors = []
         self.__current_client = None
+        self.__databases: List[Database] = []
+
+        # round robin to get database
+        self.db_rb_num = -1
 
         # RDB / AOF
         self.loading = False
@@ -24,6 +29,14 @@ class ReServer:
 
         # Limits
         self.max_clients = 1000
+
+    def create_databases(self):
+        for i in range(self.db_num):
+            self.__databases.append(Database(i))
+
+    def get_database(self) -> Database:
+        self.db_rb_num = (self.db_rb_num+1) % self.db_num
+        return self.__databases[self.db_rb_num]
 
     @property
     def next_client_id(self):
@@ -35,7 +48,7 @@ class ReServer:
 
     def connect_from_client(self, conn: socket):
         connection = Connection(conn)
-        client = Client(self.next_client_id, connection)
+        client = Client(self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
     def read_from_client(self, fd):

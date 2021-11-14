@@ -1,7 +1,7 @@
 
-from Server.Server import ReServer
+from Server.server import Server
 
-server = ReServer()
+server = Server()
 
 
 
