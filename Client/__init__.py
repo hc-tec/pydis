@@ -1,2 +1,2 @@
 
-from .Client import ReClient
+from .client import Client

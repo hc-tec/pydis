@@ -2,7 +2,7 @@
 from typing import Dict
 
 from socket import socket
-from Client import ReClient
+from Client import Client
 from Connection import Connection
 
 
@@ -11,7 +11,7 @@ class ReServer:
     def __init__(self):
         self.__next_client_id = 1
         self.__loop = None
-        self.__clients: Dict[int, ReClient] = {}
+        self.__clients: Dict[int, Client] = {}
         self.__slaves = []
         self.__monitors = []
         self.__current_client = None
@@ -35,7 +35,7 @@ class ReServer:
 
     def connect_from_client(self, conn: socket):
         connection = Connection(conn)
-        client = ReClient(self.next_client_id, connection)
+        client = Client(self.next_client_id, connection)
         self.__clients[conn.fileno()] = client
 
     def read_from_client(self, fd):
