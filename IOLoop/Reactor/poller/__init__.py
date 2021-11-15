@@ -1,8 +1,8 @@
 
 
 from .base import Poller
-from .Epoll import Epoll
-from .Select import Select
+from .epoll import Epoll
+from .select import Select
 
 from Generic.runtime import platform
 

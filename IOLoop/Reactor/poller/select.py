@@ -3,7 +3,7 @@
 import select
 
 from .base import Poller
-from IOLoop.Reactor.FiredEvent import ReEvent, FiredEvent
+from IOLoop.Reactor.firedEvent import ReEvent, FiredEvent
 
 class Select(Poller):
 

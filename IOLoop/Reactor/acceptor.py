@@ -3,8 +3,8 @@ import socket
 import select
 
 # from IOLoop.Reactor.Reactor import Reactor
-from IOLoop.Reactor.FileEvent import FileEvent
-from IOLoop.Reactor.FiredEvent import FiredEvent, ReEvent
+from IOLoop.Reactor.fileEvent import FileEvent
+from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
 from Server import server
 
 

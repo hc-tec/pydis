@@ -4,9 +4,9 @@ import select
 from typing import Dict
 
 from IOLoop.Reactor.poller import poller_class
-from IOLoop.Reactor.FiredEvent import FiredEvent, ReEvent
-from IOLoop.Reactor.FileEvent import FileEvent
-from IOLoop.Reactor.Acceptor import Acceptor
+from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
+from IOLoop.Reactor.fileEvent import FileEvent
+from IOLoop.Reactor.acceptor import Acceptor
 
 
 class Reactor:

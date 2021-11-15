@@ -2,7 +2,7 @@
 import select
 
 from .base import Poller
-from IOLoop.Reactor.FiredEvent import FiredEvent, ReEvent
+from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
 
 
 class Epoll(Poller):
