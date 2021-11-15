@@ -1,11 +1,13 @@
 
 from typing import Dict, Any, List
 
+from Exception.base import BaseError
+
 COMMAND_MIN_ARGS_NUM = 0
 COMMAND_MAX_ARGS_NUM = 9999
 
 
-class BaseCommandError(Exception):
+class BaseCommandError(BaseError):
     msg = 'Command Error'
 
 

@@ -4,7 +4,7 @@ from Connection import Connection
 from Protocol import RESProtocol
 from Database import Database
 from Command import CommandHandler
-
+from Server import server
 
 class Client:
 
@@ -53,3 +53,6 @@ class Client:
     def handle_command(self, cmd_data):
         handler = CommandHandler(self, cmd_data)
         handler.handle()
+
+    def switch_database(self, db_index):
+        self.db = server.get_database(db_index)

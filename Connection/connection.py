@@ -3,8 +3,8 @@ from socket import socket
 from abc import abstractmethod
 
 from IOLoop import IOReader, IOWriter
-from IOLoop.Reactor import Reactor
-from IOLoop.Reactor.FiredEvent import ReEvent
+from IOLoop.Reactor import reactor
+from IOLoop.Reactor.firedEvent import ReEvent
 
 
 class BaseConnection:
@@ -20,9 +20,9 @@ class BaseConnection:
 
 class Connection(BaseConnection):
 
-    def __init__(self, sock: socket, reactor: Reactor):
+    def __init__(self, sock: socket, reactor: reactor):
         self.__socket = sock
-        self.__reactor: Reactor = reactor
+        self.__reactor: reactor = reactor
         self.__event = ReEvent.RE_READABLE
 
     @property
@@ -43,8 +43,8 @@ class Connection(BaseConnection):
         try:
             self.__reactor.poller.unregister(self.sock_fd)
             self.__socket.close()
-        except Exception as e:
-            print(e)
+        except Exception:
+            pass
 
     def enable_read(self):
         self.update_event(ReEvent.RE_READABLE)
