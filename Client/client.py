@@ -14,7 +14,9 @@ class Client:
         self.conn = conn
         self.db = db
 
-        self.query_buffer = []
+        self.query_buffer = ''
+        self.query_cursor = 0
+
         self.current_command = None
         self.create_time = time.time() * 1000
         self.last_interaction = None
@@ -25,11 +27,20 @@ class Client:
 
         self.reply_buffer = []
 
+    def is_command_input_end(self):
+        print(self.query_buffer)
+        return self.query_buffer.endswith('\n')
+
     def read_from_client(self):
         raw_read_data = self.conn.handle_read()
-        read_data = RESProtocol(raw_read_data).parse()
-        self.query_buffer.append(read_data)
-        self.handle_command()
+        self.query_buffer += raw_read_data
+        if self.is_command_input_end():
+            self.query_cursor += len(self.query_buffer)
+            read_data = RESProtocol(self.query_buffer).parse()
+            self.query_buffer = ''
+            self.query_cursor = 0
+            self.handle_command(read_data)
+            self.conn.enable_write()
 
     def write_to_client(self):
         if self.reply_buffer:
@@ -39,6 +50,6 @@ class Client:
     def append_reply(self, reply):
         self.reply_buffer.append(reply)
 
-    def handle_command(self):
-        handler = CommandHandler(self)
+    def handle_command(self, cmd_data):
+        handler = CommandHandler(self, cmd_data)
         handler.handle()

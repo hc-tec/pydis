@@ -15,4 +15,5 @@ class IOWriter:
                 if send_len == len(data):
                     break
         except BrokenPipeError as e:
+            print(e)
             pass

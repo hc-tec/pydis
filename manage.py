@@ -1,4 +1,10 @@
 
+'''
+telnet 127.0.0.1 8989
+set name titto
+get name
+'''
+
 import argparse
 from IOLoop.Reactor import ReReactor
 from Server import server
@@ -17,6 +23,7 @@ def parse_args():
 
 def main():
     reactor = ReReactor('127.0.0.1', 8989)
+    server.set_loop(reactor)
     while True:
         reactor.poll()
 

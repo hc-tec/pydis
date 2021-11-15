@@ -4,7 +4,7 @@ import select
 
 # from IOLoop.Reactor.Reactor import Reactor
 from IOLoop.Reactor.FileEvent import FileEvent
-from IOLoop.Reactor.FiredEvent import FiredEvent
+from IOLoop.Reactor.FiredEvent import FiredEvent, ReEvent
 from Server import server
 
 
@@ -35,17 +35,15 @@ class Acceptor:
         conn_fd = conn.fileno()
         file_event = FileEvent(self.reactor, conn, addr)
         self.reactor.events[conn_fd] = file_event
-        self.reactor.poller.register(conn_fd, select.EPOLLIN)
+        self.reactor.poller.register(conn_fd, ReEvent.RE_READABLE)
 
         server.connect_from_client(conn)
 
     def handle_read(self, fired_event: FiredEvent):
         server.read_from_client(fired_event.fd)
-        self.reactor.poller.modify(fired_event.fd, select.EPOLLOUT)
 
     def handle_write(self, fired_event: FiredEvent):
         server.write_to_client(fired_event.fd)
-        self.reactor.poller.modify(fired_event.fd, select.EPOLLIN)
 
     def handle_close(self, fired_event: FiredEvent):
         self.reactor.poller.unregister(fired_event.fd)

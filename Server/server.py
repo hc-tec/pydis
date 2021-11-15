@@ -5,13 +5,14 @@ from socket import socket
 from Client import Client
 from Connection import Connection
 from Database import Database
+from IOLoop.Reactor import Reactor
 
 
 class Server:
 
     def __init__(self):
         self.__next_client_id = 1
-        self.__loop = None
+        self.__loop: Reactor = None
         self.__clients: Dict[int, Client] = {}
         self.__slaves = []
         self.__monitors = []
@@ -45,11 +46,11 @@ class Server:
         self.__next_client_id += 1
         return self.__next_client_id
 
-    def set_loop(self, loop):
+    def set_loop(self, loop: Reactor):
         self.__loop = loop
 
     def connect_from_client(self, conn: socket):
-        connection = Connection(conn)
+        connection = Connection(conn, self.__loop)
         client = Client(self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 

@@ -22,8 +22,8 @@ class IOReader:
                 if e.errno == errno.EAGAIN:
                     break
                 else:
-                    print(e)
-                    return ''
+                    # print(e)
+                    return data
             except UnicodeDecodeError as e:
                 pass
         print(data)
