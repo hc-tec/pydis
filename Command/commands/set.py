@@ -3,7 +3,18 @@ from Command import BaseCommand
 from Database import Database
 from Timer.event import TimeoutEvent
 from Timer.timestamp import Timestamp
-# from Server.server import server
+
+
+class ExpiresKeyRemoveEvent(TimeoutEvent):
+
+    def handle_event(self, reactor):
+        extra_data = self.extra_data
+        print('expire event activate')
+        client = extra_data['client']
+        db: Database = client.db
+        print(db.expires, db.dict)
+        db.remove_expires(extra_data['expires_key'])
+        print(db.expires, db.dict)
 
 
 class Set(BaseCommand):
@@ -18,13 +29,14 @@ class Set(BaseCommand):
             db.store(args['key'], args['value'])
         else:
             db.store(args['key'], args['value'])
-            db.store_expires(args['key'], expires_time)
             self.set_expires_timer(args['key'], expires_time)
 
     def set_expires_timer(self, key, expires_time):
+        db: Database = self.client.db
         timestamp = Timestamp(expires_time, 's')
-        timeout_event = TimeoutEvent(timestamp)
-        timeout_event.set_callback(Set.expires_event).set_extra_data({
+        db.store_expires(key, timestamp.get_time())
+        timeout_event = ExpiresKeyRemoveEvent(timestamp)
+        timeout_event.set_extra_data({
             "client": self.client,
             "expires_key": key
         })
@@ -33,11 +45,3 @@ class Set(BaseCommand):
         reactor.create_timeout_event(timeout_event)
         print('expire event build')
 
-    @staticmethod
-    def expires_event(reactor, extra_data):
-        print('expire event activate')
-        client = extra_data['client']
-        db: Database = client.db
-        print(db.expires, db.dict)
-        db.remove_expires(extra_data['expires_key'])
-        print(db.expires, db.dict)
