@@ -1,5 +1,4 @@
 
-import time
 from typing import Callable
 from Timer.timestamp import Timestamp
 

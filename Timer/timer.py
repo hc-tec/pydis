@@ -1,8 +1,8 @@
 
-import time
+
 import heapq
 from typing import List
-
+from Generic.time import get_cur_time
 from Timer.event import TimeoutEvent
 
 
@@ -22,8 +22,16 @@ class Timer:
 
     def get_earliest_time(self):
         if self.get_events():
-            return int(self.get_events()[0].get_timestamp().get_time() - time.time() * 1000)
+            return int(self.get_events()[0].get_timestamp().get_time() - get_cur_time())
         return float("inf")
 
     def is_event_can_active(self):
-        return abs(self.get_earliest_time()) < 100
+        return abs(self.get_earliest_time()) < 50
+
+
+class SaveParam:
+
+    def __init__(self, seconds, changes):
+        self.seconds = seconds * 1000
+        self.changes = changes
+

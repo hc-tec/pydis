@@ -1,5 +1,7 @@
 
-import time
+
+from Generic.time import get_cur_time
+
 
 class Timestamp:
 
@@ -10,7 +12,7 @@ class Timestamp:
         :param format: 'H' or 'M' or 'S' or 'MS'
         '''
         format = format.upper()
-        self.__time = int(time.time() * 1000)
+        self.__time = int(get_cur_time())
         format_func = getattr(self, f'_format_from_{format}')
         self.__time += format_func(int(_time))
 
