@@ -1,5 +1,5 @@
 
-import time
+
 from typing import Dict
 
 from IOLoop.Reactor.poller import poller_class
@@ -61,7 +61,7 @@ class Reactor:
 
     def poll(self):
         time = self.get_earliest_time() / 1000
-        print(time)
+        # print(time)
         events = self.poller.poll(self, min(time, MAX_TIMEOUT))
 
         self.process_poll_event(events)

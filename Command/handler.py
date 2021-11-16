@@ -10,6 +10,7 @@ class CommandHandler:
     def __init__(self, client, cmd_data):
         self.client = client
         self.cmd_name = ''
+        self.raw_cmd = cmd_data
         self.cmd_data = cmd_data.split()
 
     def is_cmd_exist(self):
@@ -36,5 +37,5 @@ class CommandHandler:
             pass
         command = self.is_cmd_exist()
         if command:
-            return command(self.client), self.cmd_data[1:]
+            return command(self.client, self.raw_cmd), self.cmd_data[1:]
         raise CommandNotExist()

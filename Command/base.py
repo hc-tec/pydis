@@ -39,8 +39,9 @@ class BaseCommand:
     max_args = COMMAND_MAX_ARGS_NUM
     args_order = []
 
-    def __init__(self, client):
+    def __init__(self, client, raw_cmd):
         self.client = client
+        self.raw_cmd = raw_cmd
 
     def check_arg_num(self, arg_len: int) -> bool:
         return self.min_args <= arg_len <= self.max_args

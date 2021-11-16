@@ -67,3 +67,4 @@ class Client:
         self.current_command = command
         if command and command.cmd_type & CommandType.CMD_WRITE:
             self.server.write_cmd_increment()
+            self.server.aof_buf.append(command.raw_cmd)
