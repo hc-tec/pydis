@@ -24,6 +24,7 @@ def parse_args():
 def main():
     reactor = Reactor('127.0.0.1', 8989)
     server.set_loop(reactor)
+    server.start_watchdog()
     while True:
         reactor.poll()
 
