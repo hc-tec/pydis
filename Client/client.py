@@ -4,12 +4,12 @@ from Connection import Connection
 from Protocol import RESProtocol
 from Database import Database
 from Command import CommandHandler
-from Server import server
+
 
 class Client:
 
-    def __init__(self, client_id: int, db: Database, conn: Connection):
-
+    def __init__(self, server, client_id: int, db: Database, conn: Connection):
+        self.server = server
         self.id = client_id
         self.conn = conn
         self.db = db
@@ -54,5 +54,8 @@ class Client:
         handler = CommandHandler(self, cmd_data)
         handler.handle()
 
-    def switch_database(self, db_index):
-        self.db = server.get_database(db_index)
+    # def switch_database(self, db_index):
+    #     self.db = server.get_database(db_index)
+    #
+    def get_server(self):
+        return self.server

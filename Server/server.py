@@ -5,14 +5,14 @@ from socket import socket
 from Client import Client
 from Connection import Connection
 from Database import Database
-from IOLoop.Reactor import reactor
 from Server.exception import DatabaseNotExistError
+
 
 class Server:
 
     def __init__(self):
         self.__next_client_id = 1
-        self.__loop: reactor = None
+        self.__loop = None
         self.__clients: Dict[int, Client] = {}
         self.__slaves = []
         self.__monitors = []
@@ -45,12 +45,15 @@ class Server:
         self.__next_client_id += 1
         return self.__next_client_id
 
-    def set_loop(self, loop: reactor):
+    def set_loop(self, loop):
         self.__loop = loop
+
+    def get_loop(self):
+        return self.__loop
 
     def connect_from_client(self, conn: socket):
         connection = Connection(conn, self.__loop)
-        client = Client(self.next_client_id, self.get_database(), connection)
+        client = Client(self, self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
     def read_from_client(self, fd):
@@ -61,3 +64,4 @@ class Server:
         client = self.__clients[fd]
         client.write_to_client()
 
+server = Server()
