@@ -1,11 +1,19 @@
 
+from socket import socket
 from typing import Dict, List
 
-from socket import socket
 from Client import Client
 from Connection import Connection
 from Database import Database
+from Database.persistence.RDB import RDB
 from Server.exception import DatabaseNotExistError
+from Timer.timer import SaveParam
+from Timer.timestamp import Timestamp
+from Timer.event import TimeoutEvent
+from Generic.time import get_cur_time
+from Conf import app
+
+SETTINGS = app.get_settings()
 
 
 class Server:
@@ -22,6 +30,19 @@ class Server:
         # RDB / AOF
         self.loading = False
 
+        # RDB persistence
+        self.save_params: List[SaveParam] = [
+            SaveParam(900, 1),
+            SaveParam(300, 10),
+            SaveParam(10, 1)
+        ]
+        self.dirty = 0
+        self.dirty_before_bgsave = get_cur_time()
+        self.rdb_filename = SETTINGS.RDB_FILE
+        self.rdb_compression = False
+        self.rdb_checksum = 0
+        self.last_save = None
+
         # Configuration
         self.db_num = 16
 
@@ -29,6 +50,20 @@ class Server:
         self.max_clients = 1000
 
         self.create_databases()
+
+    def write_cmd_increment(self):
+        self.dirty +=  1
+
+    def rdb_reset(self):
+        self.dirty = 0
+        self.dirty_before_bgsave = get_cur_time()
+
+    def start_watchdog(self):
+        # execute per 100ms
+        timestamp = Timestamp(100)
+        watchdog_event = ServerWatchDog(timestamp)
+        watchdog_event.set_extra_data(self)
+        self.get_loop().create_timeout_event(watchdog_event)
 
     def create_databases(self):
         for i in range(self.db_num):
@@ -64,4 +99,31 @@ class Server:
         client = self.__clients[fd]
         client.write_to_client()
 
+
+class ServerWatchDog(TimeoutEvent):
+
+    def handle_event(self, reactor):
+        server: Server = self.extra_data
+        # print('watch dog')
+
+        self.process_persistence(server)
+
+        # restart watchdog when finish execution
+        server.start_watchdog()
+
+    def process_persistence(self, server: Server):
+
+        # RDB
+        for save_param in server.save_params:
+            if server.dirty >= save_param.changes and \
+                get_cur_time() - server.dirty_before_bgsave >= save_param.seconds:
+
+                rdb = RDB(server.rdb_filename)
+                rdb.save(server)
+                server.rdb_reset()
+                break
+
+
+
 server = Server()
+

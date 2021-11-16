@@ -1,10 +1,13 @@
 
-import time
+
+from typing import Optional
+
 from Connection import Connection
 from Protocol import RESProtocol
 from Database import Database
-from Command import CommandHandler
-
+from Command.base import BaseCommand, CommandType
+from Command.handler import CommandHandler
+from Generic.time import get_cur_time
 
 class Client:
 
@@ -17,8 +20,8 @@ class Client:
         self.query_buffer = ''
         self.query_cursor = 0
 
-        self.current_command = None
-        self.create_time = time.time() * 1000
+        self.current_command: Optional[BaseCommand] = None
+        self.create_time = get_cur_time()
         self.last_interaction = None
         self.authenticated = True
 
@@ -59,3 +62,8 @@ class Client:
     #
     def get_server(self):
         return self.server
+
+    def set_current_command(self, command: BaseCommand):
+        self.current_command = command
+        if command and command.cmd_type & CommandType.CMD_WRITE:
+            self.server.write_cmd_increment()

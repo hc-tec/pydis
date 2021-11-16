@@ -1,7 +1,7 @@
 
 from typing import List, Tuple
 
-from .Commands import COMMAND_DICT
+from .commands import COMMAND_DICT
 from .base import BaseCommandError, BaseCommand, CommandNotExist
 
 
@@ -18,6 +18,7 @@ class CommandHandler:
     def handle(self):
         try:
             command, args = self.parse_command()
+            self.client.set_current_command(command)
             result = command.execute(args)
             if result:
                 self.client.append_reply(result)
@@ -25,6 +26,8 @@ class CommandHandler:
                 self.client.append_reply('(ok) \n')
         except BaseCommandError as e:
             self.client.append_reply(e.msg)
+        finally:
+            self.client.set_current_command(None)
 
     def parse_command(self) -> Tuple[BaseCommand, List]:
         try:
