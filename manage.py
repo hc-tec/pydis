@@ -7,7 +7,7 @@ get name
 
 import argparse
 from IOLoop.Reactor import Reactor
-from Server import server
+from Server.server import server
 
 
 def parse_args():

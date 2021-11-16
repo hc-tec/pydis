@@ -9,9 +9,10 @@ class Timestamp:
         :param time: time provide by caller
         :param format: 'H' or 'M' or 'S' or 'MS'
         '''
-        self.__time = time.time() * 1000
+        format = format.upper()
+        self.__time = int(time.time() * 1000)
         format_func = getattr(self, f'_format_from_{format}')
-        self.__time += format_func(_time)
+        self.__time += format_func(int(_time))
 
     def get_time(self):
         return self.__time
