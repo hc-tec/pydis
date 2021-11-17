@@ -199,6 +199,7 @@ class ServerWatchDog(TimeoutEvent):
                 for slave in server.repl_slaves:
                     if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
                         slave.append_reply(rdb_file_data+'\n')
+                        slave.conn.enable_write()
                 server.need_sync = False
 
     def process_persistence(self, server: Server):

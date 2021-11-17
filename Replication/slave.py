@@ -29,6 +29,8 @@ class SlaveClient(Client):
         elif read_data == '(ok)':
             if server.repl_state == REPL_SLAVE_STATE.RECEIVE_IP:
                 server.repl_state = REPL_SLAVE_STATE.SEND_PSYNC
+            elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
+                pass
             else:
                 server.repl_state += 1
         elif self.is_persistence_data(read_data):
@@ -36,6 +38,7 @@ class SlaveClient(Client):
             server.load_from_master(read_data)
             server.repl_state = REPL_SLAVE_STATE.CONNECTED
             print(read_data)
+            print('load')
             # server.master.append_reply(f'{read_data}\n')
 
         if server.repl_state == REPL_SLAVE_STATE.CONNECTED:
@@ -63,4 +66,7 @@ class SlaveClient(Client):
         elif server.repl_state == REPL_SLAVE_STATE.SEND_PSYNC:
             self.append_reply('SYNC\n')
             server.repl_state = REPL_SLAVE_STATE.RECEIVE_PSYNC
+        elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
+            self.append_reply('(ok)\n')
+            server.repl_state = REPL_SLAVE_STATE.TRANSFER
         self.conn.enable_write()

@@ -63,10 +63,10 @@ class Client:
         self.conn.enable_write()
 
     def write_to_client(self):
-        if self.reply_buffer:
-            data = self.reply_buffer.pop()
+        for data in self.reply_buffer:
             self.conn.handle_write(data)
-            self.conn.enable_read()
+            self.reply_buffer = []
+        self.conn.enable_read()
 
     def append_reply(self, reply):
         self.reply_buffer.append(reply)

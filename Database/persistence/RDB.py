@@ -1,8 +1,12 @@
 
 from threading import Thread
 
+from Database.database import Database
 from Database.persistence.base import BasePersistence, PERS_STATUS
-from Generic.json import json_dumps
+from Generic.json import json_dumps, json_loads
+
+
+RDB_FILE_READ_MAX = 1024
 
 
 class RDB(BasePersistence):
@@ -14,6 +18,19 @@ class RDB(BasePersistence):
         # write RDB file in thread
         write_thread = RDBWriteThread(self, server)
         write_thread.start()
+
+    def load(self, server):
+        with open(self.save_file_path, 'r') as file:
+            file_data = file.readlines()
+            data = ''.join(file_data)
+        self.load_from_data(server, data)
+
+    def load_from_data(self, server, data):
+        data = json_loads(data)
+        databases = server.get_databases()
+        for index, database_dict in enumerate(data):
+            database: Database = databases[index]
+            database.initial_with_dict(database_dict)
 
 
 class RDBWriteThread(Thread):
