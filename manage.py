@@ -1,6 +1,6 @@
 
 '''
-telnet 127.0.0.1 8989
+telnet 127.0.0.1 9527
 set name titto
 get name
 '''
@@ -12,7 +12,7 @@ from Server.server import server
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ip", "-i", help="Server listening IP address [default: 127.0.01]", default="127.0.0.1")
+    parser.add_argument("--host", "-i", help="Server listening host [default: 127.0.0.1]", default="127.0.0.1")
     parser.add_argument("--port", "-p", help="Server listening port [default: 9527]", type=int, default=9527)
     parser.add_argument("--enauth", "-e", help="Enable auth password", action="store_true")
     parser.add_argument("--authpwd", "-a", help="Set server-end auth password", default=None)
@@ -22,8 +22,10 @@ def parse_args():
 
 
 def main():
-    reactor = Reactor('127.0.0.1', 8989)
+    args = parse_args()
+    reactor = Reactor(args.host, args.port)
     server.set_loop(reactor)
+    server.set_host(args.host, args.port)
     server.start_watchdog()
     while True:
         reactor.poll()

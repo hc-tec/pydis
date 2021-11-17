@@ -3,6 +3,7 @@ from Command.base import BaseCommand, CommandType
 from Database import Database
 from Timer.event import TimeoutEvent
 from Timer.timestamp import Timestamp
+from Conf.command import CMD_RES
 
 
 class Set(BaseCommand):
@@ -20,6 +21,7 @@ class Set(BaseCommand):
             expires_time = int(expires_time)
             db.store(args['key'], args['value'])
             self.set_expires_timer(args['key'], expires_time)
+        return CMD_RES.OK
 
     def set_expires_timer(self, key, expires_time):
         db: Database = self.client.db

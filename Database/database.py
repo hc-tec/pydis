@@ -9,6 +9,13 @@ class Database:
         self.ready_keys = {}
         self.watch_keys = {}
 
+    def initial_with_dict(self, data_dict):
+        self.dict = data_dict['dict']
+        self.expires = data_dict['expires']
+        self.blocking_keys = data_dict['blocking_keys']
+        self.ready_keys = data_dict['ready_keys']
+        self.watch_keys = data_dict['watch_keys']
+
     def store(self, key, value):
         self.dict[key] = value
 

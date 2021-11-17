@@ -6,4 +6,4 @@ class RESProtocol:
         self.__raw_data: str = raw_data.strip()
 
     def parse(self):
-        return self.__raw_data
+        return self.__raw_data.lower()

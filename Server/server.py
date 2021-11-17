@@ -13,7 +13,11 @@ from Timer.timer import SaveParam
 from Timer.timestamp import Timestamp
 from Timer.event import TimeoutEvent
 from Generic.time import get_cur_time
+from Generic.server import generate_uuid
+from Generic.file import read_file
 from Conf import app
+from Replication.slave import SlaveClient, REPL_SLAVE_STATE
+
 
 SETTINGS = app.get_settings()
 
@@ -30,6 +34,9 @@ class Server:
         self.__databases: List[Database] = []
 
         self.watchdog_run_num = 0
+
+        self.host = None
+        self.port = None
 
         # persistence status
         self.pers_status = PERS_STATUS.NO_WRITE
@@ -58,6 +65,22 @@ class Server:
         self.aof_buf = []
         self.aof_rewrite_last_time = get_cur_time()
 
+        # Replication (master)
+        self.repl_id = generate_uuid()
+        self.repl_ping_slave_period = 10 # Master pings the slave every N seconds
+        self.repl_good_slaves_count = 0
+        self.repl_min_slaves_to_write = 0
+        self.repl_min_slaves_max_lag = 10
+        self.repl_slaves: List[Client] = []
+        self.need_sync = False
+
+        # Replication (slave)
+        self.master_host = None
+        self.master_port = None
+        self.master = None
+        self.repl_state = REPL_SLAVE_STATE.NONE
+        self.repl_slave_ro = True
+
         # Configuration
         self.db_num = 16
 
@@ -65,13 +88,14 @@ class Server:
         self.max_clients = 1000
 
         self.create_databases()
+        self.load_persistent_file()
+
+    def set_host(self, host, port):
+        self.host = host
+        self.port = port
 
     def write_cmd_increment(self):
         self.dirty +=  1
-
-    def rdb_reset(self):
-        self.dirty = 0
-        self.dirty_before_bgsave = get_cur_time()
 
     def start_watchdog(self):
         # execute per 100ms
@@ -109,6 +133,18 @@ class Server:
         client = Client(self, self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
+    def connect_to_master(self, conn: socket, addr):
+        self.get_loop().get_acceptor()._handle_accept(
+            conn,
+            addr,
+            self.get_loop().events,
+            self.get_loop().get_poller()
+        )
+        connection = Connection(conn, self.__loop)
+        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection)
+        self.master = slave
+        self.__clients[conn.fileno()] = slave
+
     def read_from_client(self, fd):
         client = self.__clients[fd]
         client.read_from_client()
@@ -117,8 +153,26 @@ class Server:
         client = self.__clients[fd]
         client.write_to_client()
 
-    def create_child_pipe(self):
-        pass
+    def rdb_reset(self):
+        self.dirty = 0
+        self.dirty_before_bgsave = get_cur_time()
+
+    def rdb_start(self):
+        rdb = RDB(self.rdb_filename)
+        rdb.save(self)
+        self.rdb_reset()
+
+    def aof_start(self):
+        aof = AOF(self.aof_filename)
+        aof.save(self)
+
+    def load_persistent_file(self):
+        rdb = RDB(SETTINGS.RDB_FILE)
+        rdb.load(self)
+
+    def load_from_master(self, data):
+        rdb = RDB(None)
+        rdb.load_from_data(self, data)
 
 
 class ServerWatchDog(TimeoutEvent):
@@ -136,10 +190,16 @@ class ServerWatchDog(TimeoutEvent):
 
     def check_persistence_status(self, server):
         if server.pers_status & PERS_STATUS.WRITED:
+            print('persistence finish')
             server.pers_status = PERS_STATUS.NO_WRITE
             server.last_save = get_cur_time()
             # TODO: notify client persistence finished
-
+            if server.need_sync:
+                rdb_file_data = read_file(server.rdb_filename)
+                for slave in server.repl_slaves:
+                    if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
+                        slave.append_reply(rdb_file_data+'\n')
+                server.need_sync = False
 
     def process_persistence(self, server: Server):
 
@@ -149,21 +209,19 @@ class ServerWatchDog(TimeoutEvent):
 
     def process_rdb(self, server):
         if not server.rdb_enable: return
-        # RDB
+
         for save_param in server.save_params:
             if server.dirty >= save_param.changes and \
                     get_cur_time() - server.dirty_before_bgsave >= save_param.seconds:
-                rdb = RDB(server.rdb_filename)
-                rdb.save(server)
-                server.rdb_reset()
+                server.rdb_start()
                 break
 
     def process_aof(self, server):
         if not server.aof_enable: return
+
         if server.watchdog_run_num % 10 != 0: return
         if server.aof_buf:
-            aof = AOF(server.aof_filename)
-            aof.save(server)
+            server.aof_start()
 
 
 server = Server()

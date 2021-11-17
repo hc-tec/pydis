@@ -37,7 +37,6 @@ class Connection(BaseConnection):
 
     def handle_write(self, data):
         IOWriter.write_to_socket(self.__socket, data)
-        self.enable_read()
 
     def handle_close(self):
         try:
@@ -59,3 +58,5 @@ class Connection(BaseConnection):
     def _update_poller(self):
         self.__reactor.poller.modify(self.sock_fd, self.__event)
 
+    def register(self):
+        self.__reactor.poller.register(self.sock_fd, self.__event)

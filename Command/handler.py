@@ -2,7 +2,9 @@
 from typing import List, Tuple
 
 from .commands import COMMAND_DICT
-from .base import BaseCommandError, BaseCommand, CommandNotExist
+from .base import BaseCommand, CommandNotExist
+from Exception.base import BaseError
+from Conf.command import CMD_RES
 
 
 class CommandHandler:
@@ -21,11 +23,11 @@ class CommandHandler:
             command, args = self.parse_command()
             self.client.set_current_command(command)
             result = command.execute(args)
-            if result:
-                self.client.append_reply(result)
-            else:
+            if not isinstance(result, CMD_RES):
+                self.client.append_reply(result+'\n')
+            elif result == CMD_RES.OK:
                 self.client.append_reply('(ok) \n')
-        except BaseCommandError as e:
+        except BaseError as e:
             self.client.append_reply(e.msg)
         finally:
             self.client.set_current_command(None)
