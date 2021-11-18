@@ -1,6 +1,7 @@
 
+
 from socket import socket
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from Client import Client
 from Connection import Connection
@@ -17,6 +18,7 @@ from Generic.server import generate_uuid
 from Generic.file import read_file
 from Conf import app
 from Replication.slave import SlaveClient, REPL_SLAVE_STATE
+from Replication.master import MasterClient
 
 
 SETTINGS = app.get_settings()
@@ -73,6 +75,7 @@ class Server:
         self.repl_min_slaves_max_lag = 10
         self.repl_slaves: List[Client] = []
         self.need_sync = False
+        self.repl_slaves_rb_num = -1 # round-robin num repr slave selected index
 
         # Replication (slave)
         self.master_host = None
@@ -145,6 +148,7 @@ class Server:
         self.master = slave
         self.__clients[conn.fileno()] = slave
 
+
     def read_from_client(self, fd):
         client = self.__clients[fd]
         client.read_from_client()
@@ -174,6 +178,20 @@ class Server:
         rdb = RDB(None)
         rdb.load_from_data(self, data)
 
+    def select_slaves(self) -> Optional[Client]:
+        if self.repl_slaves:
+            usable_slaves = list(filter(Client.is_slave_connected, self.repl_slaves))
+            self.repl_slaves_rb_num = (self.repl_slaves_rb_num+1) % len(usable_slaves)
+            return usable_slaves[self.repl_slaves_rb_num]
+        return None
+
+    def upgrade_client_to_master(self, client: Client):
+        master = MasterClient()
+        # copy from client
+        master.upgrade_from_client(client)
+        self.repl_slaves.append(master)
+        # replace common client with master client
+        self.__clients[client.conn.sock_fd] = master
 
 class ServerWatchDog(TimeoutEvent):
 
@@ -198,6 +216,7 @@ class ServerWatchDog(TimeoutEvent):
                 rdb_file_data = read_file(server.rdb_filename)
                 for slave in server.repl_slaves:
                     if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
+                        print('write to slave')
                         slave.append_reply(rdb_file_data+'\n')
                         slave.conn.enable_write()
                 server.need_sync = False

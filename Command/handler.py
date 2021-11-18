@@ -21,12 +21,13 @@ class CommandHandler:
     def handle(self):
         try:
             command, args = self.parse_command()
-            self.client.set_current_command(command)
-            result = command.execute(args)
-            if not isinstance(result, CMD_RES):
-                self.client.append_reply(f'{result}\n')
-            elif result == CMD_RES.OK:
-                self.client.append_reply('(ok) \n')
+            is_continue = self.client.set_current_command(command)
+            if is_continue:
+                result = command.execute(args)
+                if not isinstance(result, CMD_RES):
+                    self.client.append_reply(f'{result}\n')
+                elif result == CMD_RES.OK:
+                    self.client.append_reply('(ok) \n')
         except BaseError as e:
             self.client.append_reply(e.msg)
         finally:

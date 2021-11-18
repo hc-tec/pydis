@@ -10,7 +10,6 @@ class SLAVE_STATE:
     ONLINE = 1 << 2
 
 
-
 class SlaveClient(Client):
 
     def __init__(self, *args, **kwargs):
@@ -25,6 +24,11 @@ class SlaveClient(Client):
         read_data = self.read_from_conn()
         if read_data is None: return
         server = self.server
+        if server.repl_state == REPL_SLAVE_STATE.CONNECTED:
+            print('slave handler', read_data)
+            self.handle_command(read_data)
+            self.conn.enable_write()
+            return
         if read_data == 'pong':
             server.repl_state = REPL_SLAVE_STATE.RECEIVE_PONG
         elif read_data == '(ok)':
@@ -40,13 +44,14 @@ class SlaveClient(Client):
             server.repl_state = REPL_SLAVE_STATE.CONNECTED
             print(read_data)
             # tell slaveof command sender all works are finish
+
+            server.master.append_reply('(ok)\n')
+            server.master.conn.enable_write()
             self.origin_client.append_reply('(ok)\n')
             self.origin_client.conn.enable_write()
             self.origin_client = None
 
-        if server.repl_state == REPL_SLAVE_STATE.CONNECTED:
-            pass
-        else:
+        if server.repl_state < REPL_SLAVE_STATE.TRANSFER:
             self.replicate()
 
     def replicate(self):

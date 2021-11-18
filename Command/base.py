@@ -9,10 +9,10 @@ COMMAND_MAX_ARGS_NUM = 9999
 
 
 class CommandType:
-    CMD_READ = 0
-    CMD_WRITE = 1
-    CMD_COMMON = 2
-    CMD_NONE = 4
+    CMD_READ = 1
+    CMD_WRITE = 1 << 2
+    CMD_COMMON = 1 << 3
+    CMD_NONE = 1 << 4
 
 
 class BaseCommandError(BaseError):

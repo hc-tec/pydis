@@ -10,5 +10,5 @@ class Sync(BaseCommand):
 
     def handle(self, args):
         self.client.server.need_sync = True
-        self.client.handle_command('bgsave')
+        self.client.handle_command_after_resp('bgsave')
         return CMD_RES.OK

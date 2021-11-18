@@ -15,12 +15,12 @@ MAX_TIMEOUT = 10
 
 class Reactor:
 
-    def __init__(self, ip, port):
-        self.__acceptor = Acceptor(ip, port)
+    def __init__(self, host, port):
+        self.__acceptor = Acceptor(host, port)
         self.poller = poller_class()
         self.timer = Timer()
 
-        self.ip = ip
+        self.host = host
         self.port = port
         self.fired: Dict[int, FiredEvent] = {}
         self.events: Dict[int, FileEvent] = {}
@@ -29,6 +29,11 @@ class Reactor:
 
     # def clear_fired(self):
     #     self.fired = []
+    def get_acceptor(self):
+        return self.__acceptor
+
+    def get_poller(self):
+        return self.poller
 
     def create_timeout_event(self, timeout_event: TimeoutEvent):
         self.timer.add_event(timeout_event)
