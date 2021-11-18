@@ -133,7 +133,7 @@ class Server:
         client = Client(self, self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
-    def connect_to_master(self, conn: socket, addr):
+    def connect_to_master(self, conn: socket, addr, origin_client: Client):
         self.get_loop().get_acceptor()._handle_accept(
             conn,
             addr,
@@ -141,7 +141,7 @@ class Server:
             self.get_loop().get_poller()
         )
         connection = Connection(conn, self.__loop)
-        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection)
+        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection, origin_client=origin_client)
         self.master = slave
         self.__clients[conn.fileno()] = slave
 

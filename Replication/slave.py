@@ -14,6 +14,7 @@ class SLAVE_STATE:
 class SlaveClient(Client):
 
     def __init__(self, *args, **kwargs):
+        self.origin_client: Client = kwargs.pop('origin_client')
         super().__init__(*args, **kwargs)
         self.replicate()
 
@@ -38,8 +39,10 @@ class SlaveClient(Client):
             server.load_from_master(read_data)
             server.repl_state = REPL_SLAVE_STATE.CONNECTED
             print(read_data)
-            print('load')
-            # server.master.append_reply(f'{read_data}\n')
+            # tell slaveof command sender all works are finish
+            self.origin_client.append_reply('(ok)\n')
+            self.origin_client.conn.enable_write()
+            self.origin_client = None
 
         if server.repl_state == REPL_SLAVE_STATE.CONNECTED:
             pass

@@ -24,7 +24,7 @@ class CommandHandler:
             self.client.set_current_command(command)
             result = command.execute(args)
             if not isinstance(result, CMD_RES):
-                self.client.append_reply(result+'\n')
+                self.client.append_reply(f'{result}\n')
             elif result == CMD_RES.OK:
                 self.client.append_reply('(ok) \n')
         except BaseError as e:
