@@ -144,3 +144,14 @@ class Client:
             elif self.repl_state == REPL_SLAVE_STATE.TRANSFER:
                 self.repl_state = REPL_SLAVE_STATE.CONNECTED
                 print('CONNECTED')
+
+    def __str__(self):
+        return '<{} id={} repl_state={} repl_ack_time={}>'.format(
+            self.__class__.__name__,
+            self.id,
+            self.repl_state,
+            self.repl_ack_time,
+        )
+
+    __repr__ = __str__
+

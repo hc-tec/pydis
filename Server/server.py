@@ -255,10 +255,9 @@ class ServerWatchDog(TimeoutEvent):
     def keep_alive_with_slaves(self, server):
         slaves: List[Client] = server.get_connected_slaves()
         if not slaves: return
-        if not server.EVETY_SECOND(3): return
+        if not server.EVETY_SECOND(10): return
         for slave in slaves:
-
-            print(slave.repl_ack_time)
+            print(slave)
             slave.append_reply('PING\n')
             slave.conn.enable_write()
 

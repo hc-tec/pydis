@@ -5,6 +5,7 @@ import select
 from .base import Poller
 from IOLoop.Reactor.firedEvent import ReEvent, FiredEvent
 
+
 class Select(Poller):
 
     def __init__(self):
@@ -25,12 +26,26 @@ class Select(Poller):
         self.unregister(fd)
         self.register(fd, event)
 
+    def clear_broken_fd(self):
+        try:
+            self.__writers.remove(-1)
+        except KeyError:
+            pass
+        try:
+            self.__readers.remove(-1)
+        except KeyError:
+            pass
+
     def poll(self, reactor, timeout=None):
         ready = []
+        timeout = max(timeout, 0)
         try:
             r, w, x = select.select(self.__readers, self.__writers, [], timeout)
         except InterruptedError:
             return ready
+        except ValueError:
+            self.clear_broken_fd()
+            r, w, x = select.select(self.__readers, self.__writers, [], timeout)
         r = set(r)
         w = set(w)
         for fd in r | w:

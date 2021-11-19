@@ -30,6 +30,8 @@ class MasterClient(Client):
         if self.repl_state == REPL_SLAVE_STATE.CONNECTED:
             self.ping_ack(read_data)
             return
+        if read_data.startswith('Command is not exist'):
+            return
         self.slave_check(read_data)
         self.handle_command(read_data)
         self.conn.enable_write()
