@@ -10,6 +10,6 @@ class Get(BaseCommand):
     max_args = 1
     cmd_type = CommandType.CMD_READ
 
-    def handle(self, args):
+    def handle(self, args, kwargs):
         db: Database = self.client.db
-        return db.withdraw(args['key'])
+        return db.withdraw(kwargs['key'])

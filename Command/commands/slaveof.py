@@ -16,10 +16,10 @@ class SlaveOf(BaseCommand):
     max_args = 2
     cmd_type = CommandType.CMD_COMMON
 
-    def handle(self, args):
+    def handle(self, args, kwargs):
         server = self.client.server
-        server.master_host = args['host']
-        server.master_port = int(args['port'])
+        server.master_host = kwargs['host']
+        server.master_port = int(kwargs['port'])
         try:
             server.repl_state = REPL_SLAVE_STATE.CONNECT
             slave_conn = socket_connect(server.master_host, server.master_port)

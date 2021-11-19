@@ -12,5 +12,5 @@ class Ping(BaseCommand):
     max_args = 0
     cmd_type = CommandType.CMD_COMMON
 
-    def handle(self, args):
+    def handle(self, args, kwargs):
         return 'PONG'

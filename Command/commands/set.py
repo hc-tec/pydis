@@ -12,15 +12,15 @@ class Set(BaseCommand):
     min_args = 2
     cmd_type = CommandType.CMD_WRITE
 
-    def handle(self, args):
+    def handle(self, args, kwargs):
         db: Database = self.client.db
-        expires_time = args.get('expires_time')
+        expires_time = kwargs.get('expires_time')
         if expires_time is None:
-            db.store(args['key'], args['value'])
+            db.store(kwargs['key'], kwargs['value'])
         else:
             expires_time = int(expires_time)
-            db.store(args['key'], args['value'])
-            self.set_expires_timer(args['key'], expires_time)
+            db.store(kwargs['key'], kwargs['value'])
+            self.set_expires_timer(kwargs['key'], expires_time)
         return CMD_RES.OK
 
     def set_expires_timer(self, key, expires_time):

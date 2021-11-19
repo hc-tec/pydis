@@ -38,6 +38,7 @@ class BaseCommand:
     min_args = COMMAND_MIN_ARGS_NUM
     max_args = COMMAND_MAX_ARGS_NUM
     args_order = []
+    need_kwargs = True
 
     def __init__(self, client, raw_cmd):
         self.client = client
@@ -56,10 +57,11 @@ class BaseCommand:
         return kwargs
 
     def execute(self, *args, **kwargs):
-        args = self.parse_args(*args)
-        return self.handle(args)
+        if self.need_kwargs:
+            kwargs = self.parse_args(*args)
+        return self.handle(*args, kwargs)
 
-    def handle(self, args):
+    def handle(self, args, kwargs):
         raise NoImplError()
 
     def get_help(self):
