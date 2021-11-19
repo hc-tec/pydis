@@ -2,13 +2,14 @@
 
 from Client.client import Client
 from Replication.base import REPL_SLAVE_STATE
-
+from Generic.time import get_cur_time
 
 
 class MasterClient(Client):
 
     def __init__(self):
         super().__init__(None, None, None, None)
+        self.origin_cmd_sender = None  # the READ command sender slave handle
 
     def upgrade_from_client(self, client: Client):
         property_list = client.__dict__.keys()
@@ -17,30 +18,24 @@ class MasterClient(Client):
 
     def read_from_client(self):
         print('master now')
-        read_data = self.read_from_conn()
-        if read_data is None: return
-        if self.handle_client:
-            self.handle_client.append_reply(f'{read_data}\n')
-            self.handle_client.conn.enable_write()
-            self.handle_client = None
+        self.read_from_conn()
+        read_data = self.read_data
+        if not read_data: return
+        if self.origin_cmd_sender:
+            print('origin sender')
+            self.origin_cmd_sender.append_reply(f'{read_data}\n')
+            self.origin_cmd_sender.conn.enable_write()
+            self.origin_cmd_sender = None
             return
-        if self.repl_state == REPL_SLAVE_STATE.CONNECTED: return
-
+        if self.repl_state == REPL_SLAVE_STATE.CONNECTED:
+            self.ping_ack(read_data)
+            return
         self.slave_check(read_data)
         self.handle_command(read_data)
         self.conn.enable_write()
+        self.read_data = ''
 
-    def slave_check(self, read_data: str):
-        if read_data.startswith('REPLCONF ip-address'.lower()):
-            self.repl_state = REPL_SLAVE_STATE.RECEIVE_IP
-        elif read_data.startswith('SYNC'.lower()):
-            self.repl_state = REPL_SLAVE_STATE.RECEIVE_PSYNC
-        elif read_data.startswith('(ok)'.lower()):
-            if self.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
-                self.repl_state = REPL_SLAVE_STATE.TRANSFER
-                print('TRANSFER')
-            elif self.repl_state == REPL_SLAVE_STATE.TRANSFER:
-                self.repl_state = REPL_SLAVE_STATE.CONNECTED
-                print('CONNECTED')
-
-
+    def ping_ack(self, read_data):
+        print('ping ack')
+        if read_data == 'pong':
+            self.repl_ack_time = get_cur_time()

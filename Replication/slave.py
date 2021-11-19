@@ -13,7 +13,7 @@ class SLAVE_STATE:
 class SlaveClient(Client):
 
     def __init__(self, *args, **kwargs):
-        self.origin_client: Client = kwargs.pop('origin_client')
+        self.slaveof_cmd_sender: Client = kwargs.pop('slaveof_cmd_sender')
         super().__init__(*args, **kwargs)
         self.replicate()
 
@@ -21,38 +21,21 @@ class SlaveClient(Client):
         return data.startswith('[')
 
     def read_from_client(self):
-        read_data = self.read_from_conn()
-        if read_data is None: return
+        self.read_from_conn()
+        read_data = self.read_data
+        if not read_data: return
         server = self.server
         if server.repl_state == REPL_SLAVE_STATE.CONNECTED:
-            print('slave handler', read_data)
+            print('slave handle command from master: ', read_data)
             self.handle_command(read_data)
             self.conn.enable_write()
             return
-        if read_data == 'pong':
-            server.repl_state = REPL_SLAVE_STATE.RECEIVE_PONG
-        elif read_data == '(ok)':
-            if server.repl_state == REPL_SLAVE_STATE.RECEIVE_IP:
-                server.repl_state = REPL_SLAVE_STATE.SEND_PSYNC
-            elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
-                pass
-            else:
-                server.repl_state += 1
-        elif self.is_persistence_data(read_data):
-            server.repl_state = REPL_SLAVE_STATE.TRANSFER
-            server.load_from_master(read_data)
-            server.repl_state = REPL_SLAVE_STATE.CONNECTED
-            print(read_data)
-            # tell slaveof command sender all works are finish
+        self.check_master_reply(read_data)
 
-            server.master.append_reply('(ok)\n')
-            server.master.conn.enable_write()
-            self.origin_client.append_reply('(ok)\n')
-            self.origin_client.conn.enable_write()
-            self.origin_client = None
-
+        # when enter TRANSFER state, replicate() can't be executed
         if server.repl_state < REPL_SLAVE_STATE.TRANSFER:
             self.replicate()
+        self.read_data = ''
 
     def replicate(self):
         server = self.server
@@ -78,3 +61,26 @@ class SlaveClient(Client):
             self.append_reply('(ok)\n')
             server.repl_state = REPL_SLAVE_STATE.TRANSFER
         self.conn.enable_write()
+
+    def check_master_reply(self, read_data):
+        server = self.server
+        if read_data == 'pong':
+            server.repl_state = REPL_SLAVE_STATE.RECEIVE_PONG
+        elif read_data == '(ok)':
+            if server.repl_state == REPL_SLAVE_STATE.RECEIVE_IP:
+                server.repl_state = REPL_SLAVE_STATE.SEND_PSYNC
+            elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
+                pass
+            else:
+                server.repl_state += 1
+        elif self.is_persistence_data(read_data):
+            server.load_from_master(read_data)
+            server.repl_state = REPL_SLAVE_STATE.CONNECTED
+            server.master.append_reply('(ok)\n')
+            server.master.conn.enable_write()
+            # tell slaveof command sender all works are finish
+            self.slaveof_cmd_sender.append_reply('(ok)\n')
+            self.slaveof_cmd_sender.conn.enable_write()
+            self.slaveof_cmd_sender = None
+
+

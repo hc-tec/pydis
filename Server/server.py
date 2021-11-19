@@ -101,8 +101,8 @@ class Server:
         self.dirty +=  1
 
     def start_watchdog(self):
-        # execute per 100ms
-        timestamp = Timestamp(100)
+        # execute per WATCH_DOG_INTERVAL(ms)
+        timestamp = Timestamp(SETTINGS.WATCH_DOG_INTERVAL)
         watchdog_event = ServerWatchDog(timestamp)
         watchdog_event.set_extra_data(self)
         self.get_loop().create_timeout_event(watchdog_event)
@@ -136,7 +136,7 @@ class Server:
         client = Client(self, self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
-    def connect_to_master(self, conn: socket, addr, origin_client: Client):
+    def connect_to_master(self, conn: socket, addr, slaveof_cmd_sender: Client):
         self.get_loop().get_acceptor()._handle_accept(
             conn,
             addr,
@@ -144,7 +144,7 @@ class Server:
             self.get_loop().get_poller()
         )
         connection = Connection(conn, self.__loop)
-        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection, origin_client=origin_client)
+        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection, slaveof_cmd_sender=slaveof_cmd_sender)
         self.master = slave
         self.__clients[conn.fileno()] = slave
 
@@ -178,20 +178,28 @@ class Server:
         rdb = RDB(None)
         rdb.load_from_data(self, data)
 
-    def select_slaves(self) -> Optional[Client]:
+    def select_slave(self) -> Optional[Client]:
         if self.repl_slaves:
             usable_slaves = list(filter(Client.is_slave_connected, self.repl_slaves))
             self.repl_slaves_rb_num = (self.repl_slaves_rb_num+1) % len(usable_slaves)
             return usable_slaves[self.repl_slaves_rb_num]
         return None
 
+    def get_connected_slaves(self) -> List[Client]:
+        return list(filter(Client.is_slave_connected, self.repl_slaves))
+
     def upgrade_client_to_master(self, client: Client):
+        print('upgrade')
         master = MasterClient()
         # copy from client
         master.upgrade_from_client(client)
         self.repl_slaves.append(master)
         # replace common client with master client
         self.__clients[client.conn.sock_fd] = master
+
+    def EVETY_SECOND(self, second=1):
+        # return True when {second}s pass, default 1s
+        return self.watchdog_run_num % (1000 * second // SETTINGS.WATCH_DOG_INTERVAL) == 0
 
 class ServerWatchDog(TimeoutEvent):
 
@@ -201,7 +209,7 @@ class ServerWatchDog(TimeoutEvent):
 
         self.process_persistence(server)
         self.check_persistence_status(server)
-
+        self.keep_alive_with_slaves(server)
         # restart watchdog when finish execution
         server.start_watchdog()
         server.watchdog_run_num += 1
@@ -211,21 +219,22 @@ class ServerWatchDog(TimeoutEvent):
             print('persistence finish')
             server.pers_status = PERS_STATUS.NO_WRITE
             server.last_save = get_cur_time()
-            # TODO: notify client persistence finished
+            # notify client persistence finished
             if server.need_sync:
-                rdb_file_data = read_file(server.rdb_filename)
-                for slave in server.repl_slaves:
-                    if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
-                        print('write to slave')
-                        slave.append_reply(rdb_file_data+'\n')
-                        slave.conn.enable_write()
-                server.need_sync = False
+                self.sync_with_slaves(server)
+
+    def sync_with_slaves(self, server):
+        rdb_file_data = read_file(server.rdb_filename)
+        for slave in server.repl_slaves:
+            if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
+                slave.append_reply(rdb_file_data + '\n')
+                slave.conn.enable_write()
+        server.need_sync = False
 
     def process_persistence(self, server: Server):
 
         self.process_rdb(server)
         self.process_aof(server)
-
 
     def process_rdb(self, server):
         if not server.rdb_enable: return
@@ -238,10 +247,20 @@ class ServerWatchDog(TimeoutEvent):
 
     def process_aof(self, server):
         if not server.aof_enable: return
+        if not server.EVETY_SECOND(): return
 
-        if server.watchdog_run_num % 10 != 0: return
         if server.aof_buf:
             server.aof_start()
+
+    def keep_alive_with_slaves(self, server):
+        slaves: List[Client] = server.get_connected_slaves()
+        if not slaves: return
+        if not server.EVETY_SECOND(3): return
+        for slave in slaves:
+
+            print(slave.repl_ack_time)
+            slave.append_reply('PING\n')
+            slave.conn.enable_write()
 
 
 server = Server()
