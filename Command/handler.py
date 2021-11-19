@@ -1,10 +1,11 @@
 
 from typing import List, Tuple
 
-from .commands import COMMAND_DICT
-from .base import BaseCommand, CommandNotExist
+from Command.commands import COMMAND_DICT
+from Command.base import BaseCommand, CommandNotExist
 from Exception.base import BaseError
-from Conf.command import CMD_RES
+
+from Client.base import CLIENT_FLAG
 
 
 class CommandHandler:
@@ -23,11 +24,16 @@ class CommandHandler:
             command, args = self.parse_command()
             is_continue = self.client.set_current_command(command)
             if is_continue:
-                result = command.execute(args)
-                if not isinstance(result, CMD_RES):
-                    self.client.append_reply(f'{result}\n')
-                elif result == CMD_RES.OK:
-                    self.client.append_reply('(ok) \n')
+                # when enter multi env
+                # push command to the command queue
+                if self.client.flag & CLIENT_FLAG.MULTI:
+                    self.client.ms_state.appendleft((command, args))
+                    self.client.append_reply('QUEUED\n')
+                else:
+                    result = command.execute(args)
+                    if result:
+                        self.client.append_reply(f'{result}\n')
+
         except BaseError as e:
             self.client.append_reply(e.msg)
         finally:

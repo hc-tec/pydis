@@ -201,6 +201,7 @@ class Server:
         # return True when {second}s pass, default 1s
         return self.watchdog_run_num % (1000 * second // SETTINGS.WATCH_DOG_INTERVAL) == 0
 
+
 class ServerWatchDog(TimeoutEvent):
 
     def handle_event(self, reactor):

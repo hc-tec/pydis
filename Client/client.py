@@ -2,6 +2,7 @@
 from collections import deque
 from typing import Optional
 
+from Client.base import CLIENT_FLAG
 from Connection import Connection
 from Protocol import RESProtocol
 from Database import Database
@@ -9,6 +10,9 @@ from Command.base import BaseCommand, CommandType
 from Command.handler import CommandHandler
 from Generic.time import get_cur_time
 from Replication.base import REPL_SLAVE_STATE
+
+
+
 
 
 class Client:
@@ -19,7 +23,7 @@ class Client:
         self.conn = conn
         self.db = db
 
-
+        self.flag = CLIENT_FLAG.MASTER
 
         self.query_buffer = ''
         self.query_cursor = 0
@@ -37,8 +41,8 @@ class Client:
         self.host_as_slave = None
         self.port_as_slave = None
 
-        # transaction
-        self.ms_state = None
+        # multi
+        self.ms_state = deque() # command queue
 
         self.watch_keys = []
         self.pubsub_channels = {}

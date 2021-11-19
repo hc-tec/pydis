@@ -44,7 +44,7 @@ class SlaveClient(Client):
         elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PONG:
             # self.append_reply('')
             server.repl_state = REPL_SLAVE_STATE.SEND_PORT
-        if server.repl_state == REPL_SLAVE_STATE.SEND_PORT:
+        elif server.repl_state == REPL_SLAVE_STATE.SEND_PORT:
             self.append_reply('REPLCONF listening-port {}\n'.format(
                 server.port
             ))

@@ -2,6 +2,7 @@
 
 from typing import Dict, Any, List
 
+from Conf.command import CMD_RES
 from Exception.base import BaseError
 
 COMMAND_MIN_ARGS_NUM = 0
@@ -59,7 +60,11 @@ class BaseCommand:
     def execute(self, *args, **kwargs):
         if self.need_kwargs:
             kwargs = self.parse_args(*args)
-        return self.handle(*args, kwargs)
+        result = self.handle(*args, kwargs)
+        if not isinstance(result, CMD_RES):
+            return result
+        elif result == CMD_RES.OK:
+            return '(ok)'
 
     def handle(self, args, kwargs):
         raise NoImplError()

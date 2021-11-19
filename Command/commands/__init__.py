@@ -6,6 +6,8 @@ from .slaveof import SlaveOf
 from .sync import Sync
 from .bgsave import BgSave
 
+from .multi import Multi
+
 from .replconf import ReplConf
 
 COMMAND_DICT = {
@@ -15,6 +17,8 @@ COMMAND_DICT = {
     'slaveof': SlaveOf,
     'sync': Sync,
     'bgsave': BgSave,
+
+    'multi': Multi,
 
     'replconf': ReplConf,
 }
