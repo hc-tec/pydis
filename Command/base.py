@@ -3,7 +3,7 @@
 from typing import Dict, Any, List
 
 from Conf.command import CMD_RES
-from Exception.base import BaseError
+from Command.exception import CommandArgsNumInvalid, NoImplError
 
 COMMAND_MIN_ARGS_NUM = 0
 COMMAND_MAX_ARGS_NUM = 9999
@@ -14,22 +14,6 @@ class CommandType:
     CMD_WRITE = 1 << 2
     CMD_COMMON = 1 << 3
     CMD_NONE = 1 << 4
-
-
-class BaseCommandError(BaseError):
-    msg = 'Command Error'
-
-
-class NoImplError(BaseCommandError):
-    msg = 'Command is not implement\n'
-
-
-class CommandNotExist(BaseCommandError):
-    msg = 'Command is not exist\n'
-
-
-class CommandArgsNumInvalid(BaseCommandError):
-    msg = 'Command args num is invalid\n'
 
 
 class BaseCommand:
@@ -62,7 +46,7 @@ class BaseCommand:
             kwargs = self.parse_args(*args)
         result = self.handle(*args, kwargs)
         if not isinstance(result, CMD_RES):
-            return result
+            return result or '(nil)'
         elif result == CMD_RES.OK:
             return '(ok)'
 
@@ -71,5 +55,3 @@ class BaseCommand:
 
     def get_help(self):
         return self.help
-
-

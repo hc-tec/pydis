@@ -14,14 +14,17 @@ Now it is still developing.
 - Client
 - Cluster
 - Command
+- Conf
 - Connection
 - Database
+- Exception
+- Generic
 - IOLoop
 - Logging
 - Protocol
 - Replication
 - Sentinel
 - Server
-- Task
+- Timer
 
 

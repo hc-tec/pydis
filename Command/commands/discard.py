@@ -1,4 +1,5 @@
 
+from Command.commands.unwatch import UnWatch
 from Command.base import BaseCommand, CommandType
 from Command.exception import DiscardWithoutMultiError
 from Conf.command import CMD_RES
@@ -15,8 +16,13 @@ class Discard(BaseCommand):
 
     def handle(self, args, kwargs):
         if self.client.flag & CLIENT_FLAG.MULTI:
-            self.client.flag &= ~CLIENT_FLAG.MULTI
-            self.client.ms_state.clear()
+            Discard.discard_transaction(self.client)
             return CMD_RES.OK
         else:
             raise DiscardWithoutMultiError()
+
+    @staticmethod
+    def discard_transaction(client):
+        client.flag &= ~(CLIENT_FLAG.MULTI | CLIENT_FLAG.DIRTY_CAS | CLIENT_FLAG.DIRTY_EXEC)
+        client.ms_state.clear()
+        UnWatch.unwatched_all_keys(client)

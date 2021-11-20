@@ -92,7 +92,8 @@ class Client:
     def handle_command(self, cmd_data):
         handler = CommandHandler(self, cmd_data)
         handler.handle()
-
+        if self.reply_buffer:
+            self.conn.enable_write()
     # def switch_database(self, db_index):
     #     self.db = server.get_database(db_index)
     #
@@ -110,6 +111,8 @@ class Client:
             self.server.aof_buf.append(command.raw_cmd)
             # sender write command to connected slaves
             self.send_write_cmd_to_slave(command.raw_cmd)
+            # watch keys change
+            self.touch_watched_key(command)
         elif self.server.repl_slave_ro and \
             command.cmd_type & CommandType.CMD_READ and \
             self.repl_state == REPL_SLAVE_STATE.NONE:
@@ -149,10 +152,19 @@ class Client:
                 self.repl_state = REPL_SLAVE_STATE.CONNECTED
                 print('CONNECTED')
 
+    def touch_watched_key(self, command: BaseCommand):
+        key = command.raw_cmd.split()[1]
+        # if key is watched, changes watching client flag
+        if key in self.db.watch_keys:
+            for client in self.db.watch_keys[key]:
+                client.flag |= CLIENT_FLAG.DIRTY_CAS
+
     def __str__(self):
-        return '<{} id={} repl_state={} repl_ack_time={}>'.format(
+        print(self.watch_keys)
+        return '<{} id={} flag={} repl_state={} repl_ack_time={}>'.format(
             self.__class__.__name__,
             self.id,
+            self.flag,
             self.repl_state,
             self.repl_ack_time,
         )

@@ -10,11 +10,9 @@ class Database:
         self.watch_keys = {}
 
     def initial_with_dict(self, data_dict):
-        self.dict = data_dict['dict']
-        self.expires = data_dict['expires']
-        self.blocking_keys = data_dict['blocking_keys']
-        self.ready_keys = data_dict['ready_keys']
-        self.watch_keys = data_dict['watch_keys']
+        init_fields = ['dict', 'expires', 'blocking_keys', 'ready_keys', 'watch_keys']
+        for field in init_fields:
+            setattr(self, field, data_dict.get(field, {}))
 
     def store(self, key, value):
         self.dict[key] = value
@@ -36,4 +34,21 @@ class Database:
         if self.withdraw_expires(key):
             del self.expires[key]
         self.remove(key)
+
+    @property
+    def __dict__(self):
+        print(self.watch_keys)
+        dict_data = {}
+        accept_fields = ['id', 'dict', 'expires']
+        for field in accept_fields:
+            dict_data[field] = getattr(self, field)
+        return dict_data
+
+    def __str__(self):
+        return '<{} id={}>'.format(
+            self.__class__.__name__.lower(),
+            self.id,
+        )
+
+    __repr__ = __str__
 

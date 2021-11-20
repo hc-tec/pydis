@@ -2,9 +2,9 @@
 from typing import List, Tuple
 
 from Command.commands import COMMAND_DICT
-from Command.base import BaseCommand, CommandNotExist
+from Command.base import BaseCommand
+from Command.exception import CommandNotExist
 from Exception.base import BaseError
-
 from Client.base import CLIENT_FLAG
 
 
@@ -26,7 +26,7 @@ class CommandHandler:
             if is_continue:
                 # when enter multi env
                 # push command to the command queue
-                if self.client.flag & CLIENT_FLAG.MULTI:
+                if self.is_multi_on(command):
                     self.client.ms_state.appendleft((command, args))
                     self.client.append_reply('QUEUED\n')
                 else:
@@ -38,6 +38,12 @@ class CommandHandler:
             self.client.append_reply(e.msg)
         finally:
             self.client.set_current_command(None)
+
+    def is_multi_on(self, command: BaseCommand):
+        multi_flag = self.client.flag & CLIENT_FLAG.MULTI
+        multi_related_commands = ['multi', 'exec', 'discard', 'watch']
+        return multi_flag and \
+               not multi_related_commands.__contains__(command.__class__.__name__.lower())
 
     def parse_command(self) -> Tuple[BaseCommand, List]:
         try:

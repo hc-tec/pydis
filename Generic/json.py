@@ -8,7 +8,10 @@ def convert_to_builtin_type(obj):
         for o in obj:
             data.append(convert_to_builtin_type(o))
         return data
-    return obj.__dict__
+    try:
+        return obj.__dict__
+    except AttributeError:
+        return None
 
 
 def json_dumps(obj):

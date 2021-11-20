@@ -7,6 +7,10 @@ from .sync import Sync
 from .bgsave import BgSave
 
 from .multi import Multi
+from .exec import Exec
+from .discard import Discard
+from .watch import Watch
+from .unwatch import UnWatch
 
 from .replconf import ReplConf
 
@@ -19,6 +23,10 @@ COMMAND_DICT = {
     'bgsave': BgSave,
 
     'multi': Multi,
+    'exec': Exec,
+    'discard': Discard,
+    'watch': Watch,
+    'unwatch': UnWatch,
 
     'replconf': ReplConf,
 }
