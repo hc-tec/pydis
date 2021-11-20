@@ -10,12 +10,12 @@ from Command.base import BaseCommand, CommandType
 from Command.handler import CommandHandler
 from Generic.time import get_cur_time
 from Replication.base import REPL_SLAVE_STATE
+from Pubsub.channel import Channel
+from Generic.patterns.observer import Observer
+from Generic.decoration import alias
 
 
-
-
-
-class Client:
+class Client(Observer):
 
     def __init__(self, server, client_id: int, db: Database, conn: Connection):
         self.server = server
@@ -80,6 +80,8 @@ class Client:
         while len(self.reply_buffer):
             data = self.reply_buffer.pop()
             self.conn.handle_write(data)
+            if self.flag & CLIENT_FLAG.PUBSUB:
+                return
             self.conn.enable_read()
 
     def append_reply(self, reply):
@@ -158,6 +160,11 @@ class Client:
         if key in self.db.watch_keys:
             for client in self.db.watch_keys[key]:
                 client.flag |= CLIENT_FLAG.DIRTY_CAS
+
+    @alias(Observer, 'update')
+    def receive_notice_from_subscribe_channel(self, channel: Channel):
+        self.append_reply(f'{channel.message}\n')
+        self.conn.enable_write()
 
     def __str__(self):
         print(self.watch_keys)

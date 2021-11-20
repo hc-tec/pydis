@@ -19,6 +19,7 @@ from Generic.file import read_file
 from Conf import app
 from Replication.slave import SlaveClient, REPL_SLAVE_STATE
 from Replication.master import MasterClient
+from Pubsub.channel import Channel
 
 
 SETTINGS = app.get_settings()
@@ -83,6 +84,12 @@ class Server:
         self.master = None
         self.repl_state = REPL_SLAVE_STATE.NONE
         self.repl_slave_ro = True
+
+        # Pubsub
+        self.pubsub_channels: Dict[str, Channel] = {}
+        self.pubsub_patterns = {}
+        self.notify_keyspace_events = None
+
 
         # Configuration
         self.db_num = 16

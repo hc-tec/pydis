@@ -12,6 +12,9 @@ from .discard import Discard
 from .watch import Watch
 from .unwatch import UnWatch
 
+from .publish import Publish
+from .subscribe import Subscribe
+
 from .replconf import ReplConf
 
 COMMAND_DICT = {
@@ -27,6 +30,9 @@ COMMAND_DICT = {
     'discard': Discard,
     'watch': Watch,
     'unwatch': UnWatch,
+
+    'publish': Publish,
+    'subscribe': Subscribe,
 
     'replconf': ReplConf,
 }
