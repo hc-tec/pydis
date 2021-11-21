@@ -162,7 +162,8 @@ class Server:
 
     def write_to_client(self, fd):
         client = self.__clients[fd]
-        client.write_to_client()
+        if client.write_to_client() == 0:
+            del self.__clients[fd]
 
     def rdb_reset(self):
         self.dirty = 0

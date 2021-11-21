@@ -32,5 +32,7 @@ class CLIENT_FLAG:
     MODULE = 1 << 27
     PROTECTED = 1 << 28
     PENDING_COMMAND = 1 << 30
+
+
     ...
 

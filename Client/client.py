@@ -76,13 +76,17 @@ class Client(Observer):
         self.conn.enable_write()
         self.read_data = ''
 
-    def write_to_client(self):
+    def write_to_client(self) -> int:
         while len(self.reply_buffer):
             data = self.reply_buffer.pop()
-            self.conn.handle_write(data)
+            if not self.conn.handle_write(data):
+                self.flag = CLIENT_FLAG.CLOSE_ASAP
+                self.close()
+                return 0
             if self.flag & CLIENT_FLAG.PUBSUB:
-                return
+                return -1
             self.conn.enable_read()
+        return 1
 
     def append_reply(self, reply):
         self.reply_buffer.appendleft(reply)
@@ -158,13 +162,24 @@ class Client(Observer):
         key = command.raw_cmd.split()[1]
         # if key is watched, changes watching client flag
         if key in self.db.watch_keys:
-            for client in self.db.watch_keys[key]:
+            clients = self.db.watch_keys[key]
+            for client in clients:
+                if client.flag & CLIENT_FLAG.CLOSE_ASAP:
+                    clients.remove(client)
+                    continue
                 client.flag |= CLIENT_FLAG.DIRTY_CAS
 
     @alias(Observer, 'update')
     def receive_notice_from_subscribe_channel(self, channel: Channel):
+        if self.flag & CLIENT_FLAG.CLOSE_ASAP:
+            channel.detach(self)
+            self.close()
+            return
         self.append_reply(f'{channel.message}\n')
         self.conn.enable_write()
+
+    def close(self):
+        self.conn.handle_close()
 
     def __str__(self):
         print(self.watch_keys)

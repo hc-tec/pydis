@@ -35,8 +35,8 @@ class Connection(BaseConnection):
             self.handle_close()
         return read_data
 
-    def handle_write(self, data):
-        IOWriter.write_to_socket(self.__socket, data)
+    def handle_write(self, data) -> int:
+        return IOWriter.write_to_socket(self.__socket, data)
 
     def handle_close(self):
         try:
