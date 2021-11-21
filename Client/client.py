@@ -3,11 +3,14 @@ from collections import deque
 from typing import Optional
 
 from Client.base import CLIENT_FLAG
+from Client.interfaces import IResponse
 from Connection import Connection
+from Connection.interfaces import IClosable
 from Protocol import RESProtocol
-from Database import Database
-from Command.base import BaseCommand, CommandType
+from Database.database import Database
+from Command.base import CommandType
 from Command.handler import CommandHandler
+from Command.interfaces import ICommand, ICommandCaller, ICommandManager
 from Generic.time import get_cur_time
 from Replication.base import REPL_SLAVE_STATE
 from Pubsub.channel import Channel
@@ -15,8 +18,13 @@ from Generic.patterns.observer import Observer
 from Generic.decoration import alias
 
 
-class Client(Observer):
-
+class Client(
+    Observer,
+    ICommandCaller,
+    ICommandManager,
+    IResponse,
+    IClosable
+):
     def __init__(self, server, client_id: int, db: Database, conn: Connection):
         self.server = server
         self.id = client_id
@@ -29,7 +37,7 @@ class Client(Observer):
         self.query_cursor = 0
         self.read_data = ''
 
-        self.current_command: Optional[BaseCommand] = None
+        self.current_command: Optional[ICommand] = None
         self.create_time = get_cur_time()
         self.last_interaction = None
         self.authenticated = True
@@ -104,7 +112,7 @@ class Client(Observer):
     def get_server(self):
         return self.server
 
-    def set_current_command(self, command: BaseCommand) -> bool:
+    def set_current_command(self, command: ICommand) -> bool:
         self.current_command = command
         if command is None: return False
 
@@ -125,7 +133,7 @@ class Client(Observer):
                 return False
         return True
 
-    def slave_handle_command(self, command: BaseCommand) -> bool:
+    def slave_handle_command(self, command: ICommand) -> bool:
         slave = self.server.select_slave()
         if slave:
             slave.origin_cmd_sender = self
@@ -156,7 +164,7 @@ class Client(Observer):
                 self.repl_state = REPL_SLAVE_STATE.CONNECTED
                 print('CONNECTED')
 
-    def touch_watched_key(self, command: BaseCommand):
+    def touch_watched_key(self, command: ICommand):
         key = command.raw_cmd.split()[1]
         # if key is watched, changes watching client flag
         if key in self.db.watch_keys:

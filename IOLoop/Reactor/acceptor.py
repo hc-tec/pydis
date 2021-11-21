@@ -3,10 +3,12 @@ import socket
 
 from IOLoop.Reactor.fileEvent import FileEvent
 from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
+from IOLoop.Reactor.poller.base import Poller
+from IOLoop.interfaces import IAcceptor
 from Server.server import server
 
 
-class Acceptor:
+class Acceptor(IAcceptor):
 
     def __init__(self, host, port):
         self.host = host
@@ -26,13 +28,13 @@ class Acceptor:
     def listen_fd(self):
         return self.__socket.fileno()
 
-    def handle_accept(self, events, poller):
+    def handle_accept(self, events, poller: Poller):
         conn, addr = self.__socket.accept()
         conn.setblocking(False)
         self._handle_accept(conn, addr, events, poller)
         server.connect_from_client(conn)
 
-    def _handle_accept(self, conn, addr, events, poller):
+    def _handle_accept(self, conn, addr, events, poller: Poller):
         conn_fd = conn.fileno()
         file_event = FileEvent(conn, addr)
         events[conn_fd] = file_event
@@ -44,6 +46,6 @@ class Acceptor:
     def handle_write(self, fired_event: FiredEvent):
         server.write_to_client(fired_event.fd)
 
-    def handle_close(self, poller, fired_event: FiredEvent):
+    def handle_close(self, poller: Poller, fired_event: FiredEvent):
         poller.unregister(fired_event.fd)
 

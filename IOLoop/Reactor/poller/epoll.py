@@ -1,11 +1,11 @@
 
 import select
 
-from .base import Poller
+from IOLoop.interfaces import IPoller
 from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
 
 
-class Epoll(Poller):
+class Epoll(IPoller):
 
     def __init__(self):
         self.__create_epoll()

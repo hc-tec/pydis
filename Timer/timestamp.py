@@ -1,9 +1,10 @@
 
 
 from Generic.time import get_cur_time
+from Timer.interfaces import ITimestamp
 
 
-class Timestamp:
+class Timestamp(ITimestamp):
 
     def __init__(self, _time, format='MS'):
         '''

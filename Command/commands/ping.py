@@ -2,7 +2,7 @@
 
 
 from Command.base import BaseCommand, CommandType
-from Database import Database
+from Database.database import Database
 
 
 class Ping(BaseCommand):

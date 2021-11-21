@@ -1,24 +1,13 @@
 
 from socket import socket
-from abc import abstractmethod
 
 from IOLoop import IOReader, IOWriter
 from IOLoop.Reactor import reactor
 from IOLoop.Reactor.firedEvent import ReEvent
+from Connection.interfaces import IConnection
 
 
-class BaseConnection:
-
-    @abstractmethod
-    def handle_read(self) -> str:
-        ...
-
-    @abstractmethod
-    def handle_write(self, data):
-        ...
-
-
-class Connection(BaseConnection):
+class Connection(IConnection):
 
     def __init__(self, sock: socket, reactor: reactor):
         self.__socket = sock

@@ -2,7 +2,7 @@
 from typing import Optional, List
 from Command.base import BaseCommand, CommandType
 from Conf.command import CMD_RES
-from Database import Database
+from Database.database import Database
 
 
 class Watch(BaseCommand):

@@ -1,5 +1,5 @@
 
-from abc import abstractmethod
+from Database.interfaces import IPersistence
 
 
 class PERS_STATUS:
@@ -10,18 +10,10 @@ class PERS_STATUS:
     RE_WRITE = 1 << 4
 
 
-class BasePersistence:
+class BasePersistence(IPersistence):
 
     def __init__(self, save_file_path):
         self.save_file_path = save_file_path
-
-    @abstractmethod
-    def save(self, server):
-        pass
-
-    @abstractmethod
-    def load(self, server):
-        pass
 
     def create_temp_file(self):
         pass

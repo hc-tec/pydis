@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 
 from Conf.command import CMD_RES
 from Command.exception import CommandArgsNumInvalid, NoImplError
+from Command.interfaces import ICommand
 
 COMMAND_MIN_ARGS_NUM = 0
 COMMAND_MAX_ARGS_NUM = 9999
@@ -16,7 +17,7 @@ class CommandType:
     CMD_NONE = 1 << 4
 
 
-class BaseCommand:
+class BaseCommand(ICommand):
 
     help = ''
     cmd_type = CommandType.CMD_COMMON

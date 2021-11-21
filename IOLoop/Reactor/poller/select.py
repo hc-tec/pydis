@@ -2,11 +2,11 @@
 
 import select
 
-from .base import Poller
+from IOLoop.interfaces import IPoller
 from IOLoop.Reactor.firedEvent import ReEvent, FiredEvent
 
 
-class Select(Poller):
+class Select(IPoller):
 
     def __init__(self):
         self.__readers = set()

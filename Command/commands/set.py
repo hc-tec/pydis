@@ -1,6 +1,6 @@
 
 from Command.base import BaseCommand, CommandType
-from Database import Database
+from Database.database import Database
 from Timer.event import TimeoutEvent
 from Timer.timestamp import Timestamp
 from Conf.command import CMD_RES

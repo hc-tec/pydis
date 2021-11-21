@@ -4,11 +4,12 @@ from typing import List, Tuple
 from Command.commands import COMMAND_DICT
 from Command.base import BaseCommand
 from Command.exception import CommandNotExist
+from Command.interfaces import ICommandHandler
 from Exception.base import BaseError
 from Client.base import CLIENT_FLAG
 
 
-class CommandHandler:
+class CommandHandler(ICommandHandler):
 
     def __init__(self, client, cmd_data):
         self.client = client

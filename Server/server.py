@@ -5,7 +5,9 @@ from typing import Dict, List, Optional
 
 from Client import Client
 from Connection import Connection
-from Database import Database
+from IOLoop.interfaces import IReactor, IReactorManager
+from Database.interfaces import IRDBCaller, IPersistenceManager, IDatabaseManager
+from Database.database import Database
 from Database.persistence.base import PERS_STATUS
 from Database.persistence.RDB import RDB
 from Database.persistence.AOF import AOF, AOF_FSYNC_TYPE
@@ -25,11 +27,11 @@ from Pubsub.channel import Channel
 SETTINGS = app.get_settings()
 
 
-class Server:
+class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager):
 
     def __init__(self):
         self.__next_client_id = 1
-        self.__loop = None
+        self.__loop: Optional[IReactor] = None
         self.__clients: Dict[int, Client] = {}
         self.__slaves = []
         self.__monitors = []
@@ -132,7 +134,7 @@ class Server:
         self.__next_client_id += 1
         return self.__next_client_id
 
-    def set_loop(self, loop):
+    def set_loop(self, loop: IReactor):
         self.__loop = loop
 
     def get_loop(self):

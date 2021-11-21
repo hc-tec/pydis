@@ -1,16 +1,15 @@
 
-from typing import Callable
-from Timer.timestamp import Timestamp
+from Timer.interfaces import ITimestamp, ITimeoutEvent
 
 
-class TimeoutEvent:
+class TimeoutEvent(ITimeoutEvent):
 
-    def __init__(self, timestamp: Timestamp):
+    def __init__(self, timestamp: ITimestamp):
         self.__timestamp = timestamp
         # self.__callback = None
         self.extra_data = None
 
-    def get_timestamp(self):
+    def get_timestamp(self) -> ITimestamp:
         return self.__timestamp
 
     # def set_callback(self, callback: Callable):

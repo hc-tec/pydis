@@ -1,5 +1,8 @@
 
-class Database:
+from Database.interfaces import IDatabase
+
+
+class Database(IDatabase):
 
     def __init__(self, db_id):
         self.id = db_id

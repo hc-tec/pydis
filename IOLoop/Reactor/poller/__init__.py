@@ -1,6 +1,5 @@
 
 
-from .base import Poller
 from .epoll import Epoll
 from .select import Select
 
