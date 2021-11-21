@@ -14,6 +14,7 @@ from .unwatch import UnWatch
 
 from .publish import Publish
 from .subscribe import Subscribe
+from .unsubscribe import Unsubscribe
 
 from .replconf import ReplConf
 
@@ -33,6 +34,7 @@ COMMAND_DICT = {
 
     'publish': Publish,
     'subscribe': Subscribe,
+    'unsubscribe': Unsubscribe,
 
     'replconf': ReplConf,
 }

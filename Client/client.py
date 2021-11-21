@@ -45,7 +45,7 @@ class Client(Observer):
         self.ms_state = deque() # command queue
 
         self.watch_keys = []
-        self.pubsub_channels = {}
+        self.pubsub_channels = set()
         self.pubsub_patterns = []
 
         self.reply_buffer = deque()
@@ -83,8 +83,6 @@ class Client(Observer):
                 self.flag = CLIENT_FLAG.CLOSE_ASAP
                 self.close()
                 return 0
-            if self.flag & CLIENT_FLAG.PUBSUB:
-                return -1
             self.conn.enable_read()
         return 1
 

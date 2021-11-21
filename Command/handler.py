@@ -29,6 +29,8 @@ class CommandHandler:
                 if self.is_multi_on(command):
                     self.client.ms_state.appendleft((command, args))
                     self.client.append_reply('QUEUED\n')
+                elif self.is_pubsub_on(command):
+                    self.client.append_reply('only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context\n')
                 else:
                     result = command.execute(args)
                     if result:
@@ -40,10 +42,17 @@ class CommandHandler:
             self.client.set_current_command(None)
 
     def is_multi_on(self, command: BaseCommand):
-        multi_flag = self.client.flag & CLIENT_FLAG.MULTI
-        multi_related_commands = ['multi', 'exec', 'discard', 'watch']
-        return multi_flag and \
-               not multi_related_commands.__contains__(command.__class__.__name__.lower())
+        multi_flag_on = self.client.flag & CLIENT_FLAG.MULTI
+        multi_allowed_commands = ['multi', 'exec', 'discard', 'watch']
+        return multi_flag_on and \
+               not multi_allowed_commands.__contains__(command.__class__.__name__.lower())
+
+    def is_pubsub_on(self, command: BaseCommand):
+        pubsub_flag_on = self.client.flag & CLIENT_FLAG.PUBSUB
+        pubsub_allowed_commands = ['ping', 'subscribe', 'unsubscribe',
+                                   'psubscribe', 'punsubscribe']
+        return pubsub_flag_on and \
+                not pubsub_allowed_commands.__contains__(command.__class__.__name__.lower())
 
     def parse_command(self) -> Tuple[BaseCommand, List]:
         try:
