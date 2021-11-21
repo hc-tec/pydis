@@ -20,10 +20,13 @@ class RDB(BasePersistence):
         write_thread.start()
 
     def load(self, server):
-        with open(self.save_file_path, 'r') as file:
-            file_data = file.readlines()
-            data = ''.join(file_data)
-        self.load_from_data(server, data)
+        try:
+            with open(self.save_file_path, 'r') as file:
+                file_data = file.readlines()
+                data = ''.join(file_data)
+            self.load_from_data(server, data)
+        except FileNotFoundError:
+            pass
 
     def load_from_data(self, server, data):
         data = json_loads(data)
