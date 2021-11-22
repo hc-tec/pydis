@@ -1,5 +1,6 @@
 
 from abc import ABCMeta, abstractmethod
+from interfaces import Factory
 
 
 class ITimestamp(metaclass=ABCMeta):
@@ -42,6 +43,9 @@ class ITimer(metaclass=ABCMeta):
     def get_earliest_time(self):
         ...
 
+    @abstractmethod
+    def is_event_can_active(self):
+        ...
 
 class ITimerManager(metaclass=ABCMeta):
 
@@ -55,4 +59,11 @@ class ITimerManager(metaclass=ABCMeta):
 
     @abstractmethod
     def process_timer_event(self):
+        ...
+
+
+class ITimerFactory(Factory):
+
+    @abstractmethod
+    def build(self) -> ITimer:
         ...

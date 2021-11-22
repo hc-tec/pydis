@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 from Client import Client
 from Connection import Connection
-from IOLoop.interfaces import IReactor, IReactorManager
+from IOLoop.Reactor.interfaces import IReactor, IReactorManager
 from Database.interfaces import IRDBCaller, IPersistenceManager, IDatabaseManager
 from Database.database import Database
 from Database.persistence.base import PERS_STATUS
@@ -141,18 +141,15 @@ class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager)
         return self.__loop
 
     def connect_from_client(self, conn: socket):
-        connection = Connection(conn, self.__loop)
+        connection = Connection(conn)
         client = Client(self, self.next_client_id, self.get_database(), connection)
         self.__clients[conn.fileno()] = client
 
     def connect_to_master(self, conn: socket, addr, slaveof_cmd_sender: Client):
-        self.get_loop().get_acceptor()._handle_accept(
-            conn,
-            addr,
-            self.get_loop().events,
-            self.get_loop().get_poller()
+        self.get_loop().get_acceptor().handle_accept(
+            conn.fileno(),
         )
-        connection = Connection(conn, self.__loop)
+        connection = Connection(conn)
         slave = SlaveClient(self, self.next_client_id, self.get_database(), connection, slaveof_cmd_sender=slaveof_cmd_sender)
         self.master = slave
         self.__clients[conn.fileno()] = slave
@@ -161,11 +158,13 @@ class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager)
     def read_from_client(self, fd):
         client = self.__clients[fd]
         client.read_from_client()
+        return client.get_connection()
 
     def write_to_client(self, fd):
         client = self.__clients[fd]
         if client.write_to_client() == 0:
             del self.__clients[fd]
+        return client.get_connection()
 
     def rdb_reset(self):
         self.dirty = 0
@@ -205,7 +204,7 @@ class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager)
         master.upgrade_from_client(client)
         self.repl_slaves.append(master)
         # replace common client with master client
-        self.__clients[client.conn.sock_fd] = master
+        self.__clients[client.conn.get_sock_fd()] = master
 
     def EVETY_SECOND(self, second=1):
         # return True when {second}s pass, default 1s

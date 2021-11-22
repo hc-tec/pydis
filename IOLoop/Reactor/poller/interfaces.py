@@ -1,8 +1,10 @@
 
+
 from abc import ABCMeta, abstractmethod
+from interfaces import Factory
 
 
-class Poller(metaclass=ABCMeta):
+class IPoller(metaclass=ABCMeta):
 
     @abstractmethod
     def register(self, fd, event):
@@ -17,7 +19,12 @@ class Poller(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def poll(self, reactor, timeout=None):
+    def poll(self, timeout=None):
         pass
 
 
+class IPollerFactory(Factory):
+
+    @abstractmethod
+    def build(self) -> IPoller:
+        ...

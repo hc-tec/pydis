@@ -1,30 +1,56 @@
 
 
-from typing import Dict
-
+from Connection.interfaces import IConnection
 from IOLoop.Reactor.poller import poller_class
-from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
-from IOLoop.Reactor.fileEvent import FileEvent
+from IOLoop.Reactor.event import ReEvent
 from IOLoop.Reactor.acceptor import Acceptor
-from IOLoop.interfaces import IReactor
+from IOLoop.Reactor.interfaces import IReactor, IAcceptor, IAcceptorFactory
+from IOLoop.Reactor.poller.interfaces import IPoller, IPollerFactory
 from Timer.timer import Timer
-from Timer.interfaces import ITimerManager, ITimeoutEvent
-
+from Timer.interfaces import ITimer, ITimerManager, ITimeoutEvent, ITimerFactory
 
 MAX_TIMEOUT = 10
 
 
+class TimerFactory(ITimerFactory):
+
+    def build(self) -> ITimer:
+        return Timer()
+
+
+class PollerFactory(IPollerFactory):
+
+    def build(self) -> IPoller:
+        return poller_class()
+
+
+class AcceptorFactory(IAcceptorFactory):
+
+    def build(self, host: str, port: int):
+        return Acceptor(host, port)
+
+
+Default_Timer_Factory = TimerFactory()
+Default_Poller_Factory = PollerFactory()
+Default_Acceptor_Factory = AcceptorFactory()
+
+
 class Reactor(IReactor, ITimerManager):
 
-    def __init__(self, host, port):
-        self.acceptor = Acceptor(host, port)
-        self.poller = poller_class()
-        self.timer = Timer()
+    def __init__(self,
+                 host,
+                 port,
+                 acceptor_factory: IAcceptorFactory=Default_Acceptor_Factory,
+                 timer_factory: ITimerFactory=Default_Timer_Factory,
+                 poller_factory: IPollerFactory=Default_Poller_Factory):
+
+        self.acceptor: IAcceptor = acceptor_factory.build(host, port)
+        self.poller: IPoller = poller_factory.build()
+        self.timer: ITimer = timer_factory.build()
 
         self.host = host
         self.port = port
-        self.fired: Dict[int, FiredEvent] = {}
-        self.events: Dict[int, FileEvent] = {}
+        # self.events: Dict[int, FileEvent] = {}
 
         self.poller.register(self.acceptor.listen_fd(), ReEvent.RE_READABLE)
 
@@ -51,24 +77,31 @@ class Reactor(IReactor, ITimerManager):
         listen_fd = self.acceptor.listen_fd()
 
         for fd, event in events:
-            fired_event = self.fired[fd]
 
             if fd == listen_fd:
-                self.acceptor.handle_accept(self.events, self.poller)
+                conn_fd = self.acceptor.connected()
+                self.poller.register(conn_fd, ReEvent.RE_READABLE)
 
             elif event & ReEvent.RE_READABLE:
-                self.acceptor.handle_read(fired_event)
+                conn: IConnection = self.acceptor.data_received(fd)
+                conn_event = conn.get_event()
+                if conn_event & ReEvent.RE_READABLE == 0:
+                    self.poller.modify(fd, conn_event)
 
             elif event & ReEvent.RE_WRITABLE:
-                self.acceptor.handle_write(fired_event)
+                conn: IConnection = self.acceptor.ready_to_write(fd)
+                conn_event = conn.get_event()
+                if conn_event & ReEvent.RE_WRITABLE == 0:
+                    self.poller.modify(fd, conn_event)
 
             elif event & ReEvent.RE_CLOSE:
-                self.acceptor.handle_close(self.poller, fired_event)
+                self.acceptor.connect_close(fd)
+                self.poller.unregister(fd)
 
     def poll(self):
         time = self.get_earliest_time() / 1000
         # print(time)
-        events = self.poller.poll(self, min(time, MAX_TIMEOUT))
+        events = self.poller.poll(min(time, MAX_TIMEOUT))
 
         self.process_poll_event(events)
         self.process_timer_event()

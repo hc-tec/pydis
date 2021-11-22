@@ -16,6 +16,9 @@ class AOF(BasePersistence):
         write_thread = AOFWriteThread(server, self)
         write_thread.start()
 
+    def load(self, server):
+        ...
+
 
 class AOFWriteThread(Thread):
 

@@ -1,10 +1,8 @@
 
 import socket
 
-from IOLoop.Reactor.fileEvent import FileEvent
-from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
-from IOLoop.Reactor.poller.base import Poller
-from IOLoop.interfaces import IAcceptor
+from Connection.interfaces import IConnection
+from IOLoop.Reactor.interfaces import IAcceptor
 from Server.server import server
 
 
@@ -28,24 +26,20 @@ class Acceptor(IAcceptor):
     def listen_fd(self):
         return self.__socket.fileno()
 
-    def handle_accept(self, events, poller: Poller):
-        conn, addr = self.__socket.accept()
-        conn.setblocking(False)
-        self._handle_accept(conn, addr, events, poller)
-        server.connect_from_client(conn)
+    def connected(self, fd=None) -> int:
+        if fd is None:
+            conn, addr = self.__socket.accept()
+            conn.setblocking(False)
+            server.connect_from_client(conn)
+            fd = conn.fileno()
+        return fd
 
-    def _handle_accept(self, conn, addr, events, poller: Poller):
-        conn_fd = conn.fileno()
-        file_event = FileEvent(conn, addr)
-        events[conn_fd] = file_event
-        poller.register(conn_fd, ReEvent.RE_READABLE)
+    def data_received(self, fd: int) -> IConnection:
+        return server.read_from_client(fd)
 
-    def handle_read(self, fired_event: FiredEvent):
-        server.read_from_client(fired_event.fd)
+    def ready_to_write(self, fd: int) -> IConnection:
+        return server.write_to_client(fd)
 
-    def handle_write(self, fired_event: FiredEvent):
-        server.write_to_client(fired_event.fd)
-
-    def handle_close(self, poller: Poller, fired_event: FiredEvent):
-        poller.unregister(fired_event.fd)
+    def connect_close(self, fd: int):
+        pass
 

@@ -58,6 +58,9 @@ class Client(
 
         self.reply_buffer = deque()
 
+    def get_connection(self):
+        return self.conn
+
     @staticmethod
     def is_slave_connected(cls):
         return cls.repl_state == REPL_SLAVE_STATE.CONNECTED

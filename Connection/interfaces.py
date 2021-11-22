@@ -5,6 +5,10 @@ from abc import ABCMeta, abstractmethod
 class IConnection(metaclass=ABCMeta):
 
     @abstractmethod
+    def get_event(self):
+        ...
+
+    @abstractmethod
     def handle_read(self) -> str:
         ...
 

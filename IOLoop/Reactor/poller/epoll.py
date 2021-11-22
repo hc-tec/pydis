@@ -1,7 +1,7 @@
 
 import select
 
-from IOLoop.Reactor.interfaces import IPoller
+from IOLoop.Reactor.poller.interfaces import IPoller
 from IOLoop.Reactor.event import ReEvent
 
 
@@ -27,6 +27,8 @@ class Epoll(IPoller):
             self.__ep_fd.modify(fd, select.EPOLLIN)
         elif event & ReEvent.RE_WRITABLE:
             self.__ep_fd.modify(fd, select.EPOLLOUT)
+        elif event & ReEvent.RE_CLOSE:
+            self.__ep_fd.modify(fd, select.EPOLLHUB | select.EPOLLRDHUP)
 
     def poll(self, timeout=None):
         # reactor.fired = {}

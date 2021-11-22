@@ -2,7 +2,7 @@
 import errno
 from socket import socket, error as sock_error
 
-from IOLoop.Reactor.firedEvent import ReEvent
+from IOLoop.Reactor.event import ReEvent
 # from IOLoop.Reactor.Reactor import Reactor
 
 

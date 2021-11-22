@@ -2,7 +2,7 @@
 
 import select
 
-from IOLoop.Reactor.interfaces import IPoller
+from IOLoop.Reactor.poller.interfaces import IPoller
 from IOLoop.Reactor.event import ReEvent
 
 
