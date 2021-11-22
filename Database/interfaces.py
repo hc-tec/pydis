@@ -1,5 +1,6 @@
 
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 
 class IDatabase(metaclass=ABCMeta):
@@ -44,38 +45,6 @@ class IDatabaseManager(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_databases(self):
+    def get_databases(self) -> List[IDatabase]:
         ...
 
-
-class IPersistence(metaclass=ABCMeta):
-
-    @abstractmethod
-    def save(self, server):
-        pass
-
-    @abstractmethod
-    def load(self, server):
-        pass
-
-
-class IPersistenceManager(metaclass=ABCMeta):
-
-    @abstractmethod
-    def load_persistent_file(self):
-        ...
-
-    @abstractmethod
-    def load_from_master(self, data):
-        ...
-
-
-class IRDBCaller(metaclass=ABCMeta):
-
-    @abstractmethod
-    def rdb_start(self):
-        ...
-
-    @abstractmethod
-    def rdb_reset(self):
-        ...

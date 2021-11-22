@@ -17,6 +17,8 @@ class Select(IPoller):
             self.__readers.add(fd)
         elif event & ReEvent.RE_WRITABLE:
             self.__writers.add(fd)
+        else:
+            self.clear_broken_fd(fd)
 
     def unregister(self, fd):
         self.__readers.discard(fd)
@@ -26,15 +28,9 @@ class Select(IPoller):
         self.unregister(fd)
         self.register(fd, event)
 
-    def clear_broken_fd(self):
-        try:
-            self.__writers.remove(-1)
-        except KeyError:
-            pass
-        try:
-            self.__readers.remove(-1)
-        except KeyError:
-            pass
+    def clear_broken_fd(self, fd=-1):
+        self.__readers.discard(fd)
+        self.__writers.discard(fd)
 
     def poll(self, timeout=None):
         ready = []

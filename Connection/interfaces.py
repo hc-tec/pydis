@@ -9,11 +9,15 @@ class IConnection(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def handle_read(self) -> str:
+    def data_received(self) -> str:
         ...
 
     @abstractmethod
-    def handle_write(self, data):
+    def ready_to_write(self, data):
+        ...
+
+    @abstractmethod
+    def connect_close(self):
         ...
 
 

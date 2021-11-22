@@ -18,16 +18,16 @@ class Connection(IConnection):
     def get_sock_fd(self):
         return self.__socket.fileno()
 
-    def handle_read(self) -> str:
+    def data_received(self) -> str:
         read_data = IOReader.read_from_socket(self.__socket)
         if read_data == '':
-            self.handle_close()
+            self.connect_close()
         return read_data
 
-    def handle_write(self, data) -> int:
+    def ready_to_write(self, data) -> int:
         return IOWriter.write_to_socket(self.__socket, data)
 
-    def handle_close(self):
+    def connect_close(self):
         try:
             self.update_event(ReEvent.RE_CLOSE)
             self.__socket.close()

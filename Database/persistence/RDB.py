@@ -1,52 +1,122 @@
 
 from threading import Thread
 
-from Database.database import Database
-from Database.persistence.base import BasePersistence, PERS_STATUS
+from typing import List
+from Timer.timer import SaveParam
+from Database.interfaces import IDatabase, IDatabaseManager
+from Database.persistence.base import PERS_STATUS
+from Database.persistence.interfaces import IPersistenceManager, IRDBManager, IRDB
 from Generic.json import json_dumps, json_loads
+from Conf import app
+from Generic.time import get_cur_time
+
+
+SETTINGS = app.get_settings()
 
 
 RDB_FILE_READ_MAX = 1024
 
 
-class RDB(BasePersistence):
+class RDB(IRDB):
 
-    def __init__(self, save_file_path):
-        super().__init__(save_file_path)
-
-    def save(self, server):
+    def save(self, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
         # write RDB file in thread
-        write_thread = RDBWriteThread(self, server)
+        write_thread = RDBWriteThread(
+            rdb=self,
+            persist_manager=persist_manager,
+            db_manager=db_manager
+        )
         write_thread.start()
 
-    def load(self, server):
+    def load(self, db_manager: IDatabaseManager):
         try:
-            with open(self.save_file_path, 'r') as file:
+            with open(self.get_save_file_path(), 'r') as file:
                 file_data = file.readlines()
                 data = ''.join(file_data)
-            self.load_from_data(server, data)
+            self.load_from_data(db_manager, data)
         except FileNotFoundError:
             pass
 
-    def load_from_data(self, server, data):
+    def load_from_data(self, db_manager: IDatabaseManager, data):
         data = json_loads(data)
-        databases = server.get_databases()
+        databases = db_manager.get_databases()
         for index, database_dict in enumerate(data):
-            database: Database = databases[index]
+            database: IDatabase = databases[index]
             database.initial_with_dict(database_dict)
 
 
 class RDBWriteThread(Thread):
 
-    def __init__(self, rdb: RDB, server):
+    def __init__(self, rdb: IRDB, persist_manager: IPersistenceManager, db_manager: IDatabaseManager):
         super().__init__()
         self.rdb = rdb
-        self.server = server
+        self.db_manager = db_manager
+        self.persist_manager = persist_manager
 
     def run(self) -> None:
-        self.server.pers_status = PERS_STATUS.WRITING
-        databases = self.server.get_databases()
+        self.persist_manager.set_pers_status(PERS_STATUS.WRITING)
+        databases = self.db_manager.get_databases()
         data = json_dumps(databases)
-        with open(self.rdb.save_file_path, 'w') as file:
+        with open(self.rdb.get_save_file_path(), 'w') as file:
             file.write(data)
-        self.server.pers_status = PERS_STATUS.WRITED
+        self.persist_manager.set_pers_status(PERS_STATUS.WRITED)
+
+
+class RDBManager(IRDBManager):
+
+    def __init__(self):
+        # RDB persistence
+        self._enable = True
+        self._save_params: List[SaveParam] = [
+            SaveParam(900, 1),
+            SaveParam(300, 10),
+            SaveParam(3, 1)
+        ]
+        self._dirty = 0
+        self._dirty_before_bgsave = get_cur_time()
+        self._rdb_filename = SETTINGS.RDB_FILE
+        self._rdb_compression = False
+        self._rdb_checksum = 0
+
+        self._last_save = None
+        self._rdb_save_time_start = 0
+
+    def get_dirty(self):
+        return self._dirty
+
+    def incr_dirty(self):
+        self._dirty += 1
+
+    def get_dirty_before_bgsave(self):
+        return self._dirty_before_bgsave
+
+    def get_save_params(self):
+        return self._save_params
+
+    def reset(self):
+        self._dirty = 0
+        self._dirty_before_bgsave = get_cur_time()
+
+    def start(self, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
+        rdb = RDB(self._rdb_filename)
+        rdb.save(persist_manager=persist_manager, db_manager=db_manager)
+        self.reset()
+
+    def load_file(self, db_manager: IDatabaseManager):
+        rdb = RDB(SETTINGS.RDB_FILE)
+        rdb.load(db_manager)
+
+    def load_from_master(self, db_manager: IDatabaseManager, data):
+        rdb = RDB(None)
+        rdb.load_from_data(db_manager, data)
+
+    def is_enable(self):
+        return self._enable
+
+    def enable(self):
+        self._enable = True
+
+    def disabled(self):
+        self._enable = False
+
+
