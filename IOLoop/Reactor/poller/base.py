@@ -1,8 +1,8 @@
 
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 
 
-class Poller:
+class Poller(metaclass=ABCMeta):
 
     @abstractmethod
     def register(self, fd, event):

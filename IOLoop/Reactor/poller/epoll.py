@@ -1,8 +1,8 @@
 
 import select
 
-from IOLoop.interfaces import IPoller
-from IOLoop.Reactor.firedEvent import FiredEvent, ReEvent
+from IOLoop.Reactor.interfaces import IPoller
+from IOLoop.Reactor.event import ReEvent
 
 
 class Epoll(IPoller):
@@ -28,10 +28,10 @@ class Epoll(IPoller):
         elif event & ReEvent.RE_WRITABLE:
             self.__ep_fd.modify(fd, select.EPOLLOUT)
 
-    def poll(self, reactor, timeout=None):
+    def poll(self, timeout=None):
         # reactor.fired = {}
         events = self.__ep_fd.poll(timeout)
-        mask = 0
+        mask = ReEvent.RE_NONE
         for fd, event in events:
             if event & select.EPOLLIN:
                 mask |= ReEvent.RE_READABLE
@@ -41,5 +41,4 @@ class Epoll(IPoller):
                 mask |= ReEvent.RE_READABLE | ReEvent.RE_WRITABLE
             elif event & select.EPOLLHUP:
                 mask |= ReEvent.RE_READABLE | ReEvent.RE_WRITABLE
-            reactor.fired[fd] = FiredEvent(fd, mask)
         return events

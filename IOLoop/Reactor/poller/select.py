@@ -2,8 +2,8 @@
 
 import select
 
-from IOLoop.interfaces import IPoller
-from IOLoop.Reactor.firedEvent import ReEvent, FiredEvent
+from IOLoop.Reactor.interfaces import IPoller
+from IOLoop.Reactor.event import ReEvent
 
 
 class Select(IPoller):
@@ -36,7 +36,7 @@ class Select(IPoller):
         except KeyError:
             pass
 
-    def poll(self, reactor, timeout=None):
+    def poll(self, timeout=None):
         ready = []
         timeout = max(timeout, 0)
         try:
@@ -49,13 +49,12 @@ class Select(IPoller):
         r = set(r)
         w = set(w)
         for fd in r | w:
-            mask = 0
+            mask = ReEvent.RE_NONE
             if fd in r:
                 mask |= ReEvent.RE_READABLE
             if fd in w:
                 mask |= ReEvent.RE_WRITABLE
             ready.append((fd, mask))
-            reactor.fired[fd] = FiredEvent(fd, mask)
         return ready
 
 
