@@ -76,7 +76,7 @@ class ReplServerMasterManager(IReplServerMasterManager, ISyncAble):
     def get_connected_slaves(self) -> List[IClient]:
         return list(filter(self.is_slave_connected, self._repl_slaves))
 
-    def get_sync(self):
+    def need_sync(self):
         return self._need_sync
 
     def sync_enable(self):
@@ -111,4 +111,8 @@ class ReplServerSlaveManager(IReplServerSlaveManager):
 
     def set_master(self, master: IClient):
         self._master = master
+
+    def set_addr(self, host, port):
+        self._master_host = host
+        self._master_port = port
 

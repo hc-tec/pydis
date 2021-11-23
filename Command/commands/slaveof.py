@@ -4,6 +4,7 @@ from Command.base import BaseCommand, CommandType
 from Exception.socket import ConnectionRefuseError
 from Replication.base import REPL_SLAVE_STATE
 from Conf.command import CMD_RES
+from Replication.interfaces import IReplServerSlaveManager
 
 
 class SlaveOf(BaseCommand):
@@ -18,19 +19,18 @@ class SlaveOf(BaseCommand):
 
     def handle(self, args, kwargs):
         server = self.client.get_server()
-        server.master_host = kwargs['host']
-        server.master_port = int(kwargs['port'])
+        host = kwargs['host']
+        port = int(kwargs['port'])
+        repl_slave_manager: IReplServerSlaveManager = server.get_repl_slave_manager()
+        repl_slave_manager.set_addr(host, port)
         try:
-            server.repl_state = REPL_SLAVE_STATE.CONNECT
-            slave_conn = socket_connect(server.master_host, server.master_port)
-            server.repl_state = REPL_SLAVE_STATE.CONNECTING
+            repl_slave_manager.set_repl_state(REPL_SLAVE_STATE.CONNECT)
+            slave_conn = socket_connect(host, port)
+            repl_slave_manager.set_repl_state(REPL_SLAVE_STATE.CONNECTING)
             server.connect_to_master(slave_conn, self.client)
-            # blocking slaveof command, append command sender to blocking_dict
             return CMD_RES.WAIT
         except TypeError as e:
             print(e)
-            server.repl_state = REPL_SLAVE_STATE.NONE
-            server.master_host = None
-            server.master_port = None
-            raise ConnectionRefuseError(server.master_host, server.master_port)
-
+            repl_slave_manager.set_repl_state(REPL_SLAVE_STATE.NONE)
+            repl_slave_manager.set_addr(None, None)
+            raise ConnectionRefuseError(host, port)

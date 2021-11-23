@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod
 from interfaces import Factory
 from Connection.interfaces import IConnection
 from Timer.interfaces import ITimerManager
+from IOLoop.Reactor.poller.interfaces import IPoller
 
 
 class IAcceptor(metaclass=ABCMeta):
@@ -17,7 +18,7 @@ class IAcceptor(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def connected(self, fd=None) -> int:
+    def connected(self) -> int:
         ...
 
     @abstractmethod
@@ -40,7 +41,11 @@ class IReactor(ITimerManager):
         ...
 
     @abstractmethod
-    def get_poller(self):
+    def get_poller(self) -> IPoller:
+        ...
+
+    @abstractmethod
+    def event_change(self, fd, event):
         ...
 
     @abstractmethod

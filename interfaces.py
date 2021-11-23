@@ -27,7 +27,7 @@ class IEnable(metaclass=ABCMeta):
 class ISyncAble(metaclass=ABCMeta):
 
     @abstractmethod
-    def get_sync(self):
+    def need_sync(self):
         ...
 
     @abstractmethod

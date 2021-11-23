@@ -1,5 +1,7 @@
 
 
+from typing import Dict
+
 from Connection.interfaces import IConnection
 from IOLoop.Reactor.poller import poller_class
 from IOLoop.Reactor.event import ReEvent
@@ -52,6 +54,8 @@ class Reactor(IReactor, ITimerManager):
         self.port = port
         # self.events: Dict[int, FileEvent] = {}
 
+        self.event_change_dict: Dict[int, int] = {}
+
         self.poller.register(self.acceptor.listen_fd(), ReEvent.RE_READABLE)
 
     # def clear_fired(self):
@@ -61,6 +65,9 @@ class Reactor(IReactor, ITimerManager):
 
     def get_poller(self):
         return self.poller
+
+    def event_change(self, fd, event):
+        self.event_change_dict[fd] = event
 
     def create_timeout_event(self, timeout_event: ITimeoutEvent):
         self.timer.add_event(timeout_event)
@@ -85,14 +92,14 @@ class Reactor(IReactor, ITimerManager):
             elif event & ReEvent.RE_READABLE:
                 conn: IConnection = self.acceptor.data_received(fd)
                 conn_event = conn.get_event()
-                if conn_event & ReEvent.RE_READABLE == 0:
-                    self.poller.modify(fd, conn_event)
+                # if conn_event & ReEvent.RE_READABLE == 0:
+                #     self.poller.modify(fd, conn_event)
 
             elif event & ReEvent.RE_WRITABLE:
                 conn: IConnection = self.acceptor.ready_to_write(fd)
                 conn_event = conn.get_event()
-                if conn_event & ReEvent.RE_WRITABLE == 0:
-                    self.poller.modify(fd, conn_event)
+                # if conn_event & ReEvent.RE_WRITABLE == 0:
+                #     self.poller.modify(fd, conn_event)
 
             elif event & ReEvent.RE_CLOSE:
                 self.acceptor.connect_close(fd)
@@ -105,3 +112,8 @@ class Reactor(IReactor, ITimerManager):
 
         self.process_poll_event(events)
         self.process_timer_event()
+
+        for fd, event in self.event_change_dict.items():
+            self.poller.modify(fd, event)
+        self.event_change_dict = {}
+

@@ -5,10 +5,13 @@ from IOLoop import IOReader, IOWriter
 from IOLoop.Reactor.event import ReEvent
 from Connection.interfaces import IConnection
 
+from IOLoop.Reactor.interfaces import IReactor
+
 
 class Connection(IConnection):
 
-    def __init__(self, sock: socket):
+    def __init__(self, sock: socket, reactor: IReactor):
+        self.__reactor = reactor
         self.__socket = sock
         self.__event = ReEvent.RE_READABLE
 
@@ -42,3 +45,4 @@ class Connection(IConnection):
 
     def update_event(self, event):
         self.__event = event
+        self.__reactor.event_change(self.get_sock_fd(), event)

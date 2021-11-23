@@ -9,6 +9,7 @@ from Client.manager import ClientManager
 from Client.interfaces import IClient, IClientHandler
 from Client.handler import SlaveHandler
 from IOLoop.Reactor.interfaces import IReactor
+from IOLoop.Reactor.event import ReEvent
 from Database.interfaces import IDatabaseManager
 from Database.persistence.manager import PersistenceManager
 from Database.persistence.base import PERS_STATUS
@@ -54,8 +55,6 @@ class Server(IServer):
 
         self.host = None
         self.port = None
-
-
 
         self.load_persistence_file()
 
@@ -123,14 +122,13 @@ class Server(IServer):
 
     def connect_to_master(self, conn: socket, slaveof_cmd_sender: IClient):
 
-        self.get_loop().get_acceptor().connected(
-            conn.fileno(),
-        )
+        self.get_loop().get_poller().register(conn.fileno(), ReEvent.RE_WRITABLE)
         client = self.connect_from_client(conn)
         slave_handler = SlaveHandler()
         slave_handler.set_slaveof_cmd_sender(slaveof_cmd_sender)
         client.transform_handler(slave_handler)
         slave_handler.replicate(client)
+        self._repl_slave_manager.set_master(client)
 
     def read_from_client(self, fd):
         return self._client_manager.read_from_client(fd)
@@ -172,17 +170,18 @@ class ServerWatchDog(TimeoutEvent):
             print('persistence finish')
             persist_manager.set_pers_status(PERS_STATUS.NO_WRITE)
             # notify client persistence finished
-            if repl_master_manager.get_sync():
+            if repl_master_manager.need_sync():
                 self.sync_with_slaves(server)
+                repl_master_manager.sync_disable()
 
     def sync_with_slaves(self, server: IServer):
         rdb_manager = server.get_rdb_manager()
         repl_master_manager = server.get_repl_master_manager()
         rdb_file_data = read_file(rdb_manager.get_file_path())
         for slave in repl_master_manager.get_slaves():
+            slave: IClient = slave
             if slave.get_repl_manager().get_repl_state() == REPL_SLAVE_STATE.TRANSFER:
                 slave.append_reply_enable_write(rdb_file_data + '\n')
-        repl_master_manager.sync_disable()
 
     def process_persistence(self, server: IServer):
 

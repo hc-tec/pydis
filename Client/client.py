@@ -39,7 +39,7 @@ class Client(IClient):
         self._server = server
         self._id = client_id
         self._db = db
-        self._conn = Connection(sock)
+        self._conn = Connection(sock, server.get_loop())
         self._reader = Reader()
         self._writer = Writer()
         self._handler: IClientHandler = BaseHandler()

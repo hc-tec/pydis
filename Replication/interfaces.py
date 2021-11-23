@@ -79,3 +79,6 @@ class IReplServerSlaveManager(IReplState):
     def set_master(self, master: IClient):
         ...
 
+    @abstractmethod
+    def set_addr(self, host, port):
+        ...

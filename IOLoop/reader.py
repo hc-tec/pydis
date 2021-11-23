@@ -12,6 +12,7 @@ class Reader(IReader):
         self._read_data = ''
 
     def is_command_input_end(self) -> bool:
+        print(self._query_buffer)
         return self._query_buffer.endswith('\n')
 
     def clear_read_data(self):

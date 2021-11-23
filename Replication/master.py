@@ -23,8 +23,7 @@ class MasterClient(Client):
         if not read_data: return
         if self.origin_cmd_sender:
             print('origin sender')
-            self.origin_cmd_sender.append_reply(f'{read_data}\n')
-            self.origin_cmd_sender.conn.enable_write()
+            self.origin_cmd_sender.append_reply_enable_write(f'{read_data}\n')
             self.origin_cmd_sender = None
             return
         if self.repl_state == REPL_SLAVE_STATE.CONNECTED:

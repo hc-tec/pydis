@@ -26,13 +26,11 @@ class Acceptor(IAcceptor):
     def listen_fd(self):
         return self.__socket.fileno()
 
-    def connected(self, fd=None) -> int:
-        if fd is None:
-            conn, addr = self.__socket.accept()
-            conn.setblocking(False)
-            server.connect_from_client(conn)
-            fd = conn.fileno()
-        return fd
+    def connected(self) -> int:
+        conn, addr = self.__socket.accept()
+        conn.setblocking(False)
+        server.connect_from_client(conn)
+        return conn.fileno()
 
     def data_received(self, fd: int) -> IConnection:
         return server.read_from_client(fd)

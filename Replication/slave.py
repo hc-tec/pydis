@@ -58,9 +58,8 @@ class SlaveClient(Client):
             self.append_reply('SYNC\n')
             server.repl_state = REPL_SLAVE_STATE.RECEIVE_PSYNC
         elif server.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
-            self.append_reply('(ok)\n')
+            self.append_reply_enable_write('(ok)\n')
             server.repl_state = REPL_SLAVE_STATE.TRANSFER
-        self.conn.enable_write()
 
     def check_master_reply(self, read_data):
         server = self.server
@@ -76,11 +75,9 @@ class SlaveClient(Client):
         elif self.is_persistence_data(read_data):
             server.load_from_master(read_data)
             server.repl_state = REPL_SLAVE_STATE.CONNECTED
-            server.master.append_reply('(ok)\n')
-            server.master.conn.enable_write()
+            server.master.append_reply_enable_write('(ok)\n')
             # tell slaveof command sender all works are finish
-            self.slaveof_cmd_sender.append_reply('(ok)\n')
-            self.slaveof_cmd_sender.conn.enable_write()
+            self.slaveof_cmd_sender.append_reply_enable_write('(ok)\n')
             self.slaveof_cmd_sender = None
 
 
