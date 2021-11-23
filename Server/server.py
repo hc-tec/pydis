@@ -107,7 +107,7 @@ class Server(IServer):
         self.get_loop().create_timeout_event(watchdog_event)
 
     def start_aof(self):
-        self.get_rdb_manager().start(self._database_manager, self._persistence_manager)
+        self.get_aof_manager().start(self._database_manager, self._persistence_manager)
 
     def start_rdb(self):
         self.get_rdb_manager().start(self._database_manager, self._persistence_manager)
@@ -123,7 +123,7 @@ class Server(IServer):
 
     def connect_to_master(self, conn: socket, slaveof_cmd_sender: IClient):
 
-        self.get_loop().get_acceptor().handle_accept(
+        self.get_loop().get_acceptor().connected(
             conn.fileno(),
         )
         client = self.connect_from_client(conn)
@@ -137,8 +137,6 @@ class Server(IServer):
 
     def write_to_client(self, fd):
         return self._client_manager.write_to_client(fd)
-
-
 
     def upgrade_client_to_master(self, client: IClient):
         print('upgrade')
@@ -173,7 +171,6 @@ class ServerWatchDog(TimeoutEvent):
         if persist_manager.get_pers_status() & PERS_STATUS.WRITED:
             print('persistence finish')
             persist_manager.set_pers_status(PERS_STATUS.NO_WRITE)
-            # server.last_save = get_cur_time()
             # notify client persistence finished
             if repl_master_manager.get_sync():
                 self.sync_with_slaves(server)

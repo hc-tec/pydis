@@ -1,4 +1,5 @@
 
+from Client.interfaces import IClient
 from Command.base import BaseCommand, CommandType
 from Database.interfaces import IDatabase
 from Timer.event import TimeoutEvent
@@ -43,6 +44,6 @@ class ExpiresKeyRemoveEvent(TimeoutEvent):
     def handle_event(self, reactor):
         extra_data = self.extra_data
         print('expire event activate')
-        client = extra_data['client']
-        db: IDatabase = client.db
+        client: IClient = extra_data['client']
+        db: IDatabase = client.get_database()
         db.remove_expires(extra_data['expires_key'])

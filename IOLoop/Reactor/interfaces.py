@@ -6,25 +6,6 @@ from Connection.interfaces import IConnection
 from Timer.interfaces import ITimerManager
 
 
-class IReactor(ITimerManager):
-
-    @abstractmethod
-    def get_acceptor(self):
-        ...
-
-    @abstractmethod
-    def get_poller(self):
-        ...
-
-    @abstractmethod
-    def process_poll_event(self, events):
-        ...
-
-    @abstractmethod
-    def poll(self):
-        ...
-
-
 class IAcceptor(metaclass=ABCMeta):
 
     @abstractmethod
@@ -50,6 +31,28 @@ class IAcceptor(metaclass=ABCMeta):
     @abstractmethod
     def connect_close(self, fd: int):
         ...
+
+
+class IReactor(ITimerManager):
+
+    @abstractmethod
+    def get_acceptor(self) -> IAcceptor:
+        ...
+
+    @abstractmethod
+    def get_poller(self):
+        ...
+
+    @abstractmethod
+    def process_poll_event(self, events):
+        ...
+
+    @abstractmethod
+    def poll(self):
+        ...
+
+
+
 
 
 class IAcceptorFactory(Factory):

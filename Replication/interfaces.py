@@ -1,9 +1,11 @@
 
 from abc import ABCMeta, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from interfaces import ISyncAble
-from Client.interfaces import IClient
+# from Client.interfaces import IClient
+
+IClient = Any
 
 
 class IReplState(metaclass=ABCMeta):

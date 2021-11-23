@@ -16,7 +16,7 @@ class Database(IDatabase):
         self._watch_keys: Dict[int, List[IClient]]  = {}
 
     def initial_with_dict(self, data_dict):
-        init_fields = ['dict', 'expires', 'blocking_keys', 'ready_keys', '_watch_keys']
+        init_fields = ['_dict', '_expires', '_blocking_keys', '_ready_keys', '_watch_keys']
         for field in init_fields:
             setattr(self, field, data_dict.get(field, {}))
 
@@ -57,7 +57,7 @@ class Database(IDatabase):
     def __dict__(self):
         print(self._watch_keys)
         dict_data = {}
-        accept_fields = ['id', 'dict', 'expires']
+        accept_fields = ['_id', '_dict', '_expires']
         for field in accept_fields:
             dict_data[field] = getattr(self, field)
         return dict_data

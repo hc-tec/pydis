@@ -1,7 +1,7 @@
 
 from socket import socket
 from abc import ABCMeta, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 from interfaces import IClosable
 from Connection.interfaces import IConnection
@@ -12,8 +12,11 @@ from Generic.patterns.observer import Observer
 from IOLoop.interfaces import IReader, IWriter
 from Pubsub.interfaces import IPubsubClientManager
 from Replication.interfaces import IReplClientManager
-from Server.interfaces import IServer
+# from Server.interfaces import IServer
 from Transaction.interfaces import ITransactionManager
+
+
+IServer = Any
 
 
 class IClientHandler(metaclass=ABCMeta):

@@ -5,7 +5,7 @@ from typing import Tuple, List, Dict, Any, Set, Optional
 from Generic.patterns.observer import Subject
 
 
-class IChannel(metaclass=ABCMeta, Subject):
+class IChannel(Subject):
 
     @abstractmethod
     def set_subscribe_message(self):

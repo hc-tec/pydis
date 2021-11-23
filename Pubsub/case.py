@@ -20,8 +20,8 @@ class Pubsub:
 
     @staticmethod
     def unsubscribe(client: IClient, channel_name: str):
-        pubsub_manager = client.get_pubsub_manager().include(channel_name)
-        if not pubsub_manager: return
+        pubsub_manager = client.get_pubsub_manager()
+        if not pubsub_manager.include(channel_name): return
         pubsub_manager.remove(channel_name)
         pubsub_server_manager = client.get_server().get_pubsub_manager()
         channel = pubsub_server_manager.get_channel(channel_name)

@@ -2,7 +2,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
-from Client.interfaces import IClient
 
 
 class IDatabase(metaclass=ABCMeta):
@@ -40,11 +39,11 @@ class IDatabase(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def withdraw_watch_keys(self, key) -> List[IClient]:
+    def withdraw_watch_keys(self, key):
         ...
 
     @abstractmethod
-    def store_watch_keys(self, key, client_list: List[IClient]):
+    def store_watch_keys(self, key, client_list):
         ...
 
     @abstractmethod
