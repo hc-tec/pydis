@@ -1,9 +1,9 @@
 
 
-from Generic.patterns.observer import Subject
+from Pubsub.interfaces import IChannel
 
 
-class Channel(Subject):
+class Channel(IChannel):
 
     def __init__(self, channel_name: str):
         super().__init__()

@@ -3,9 +3,10 @@
 from collections import deque
 
 from Connection.interfaces import IConnection
+from IOLoop.interfaces import IWriter
 
 
-class Writer():
+class Writer(IWriter):
 
     def __init__(self):
 

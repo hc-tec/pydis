@@ -3,9 +3,10 @@ from abc import ABCMeta, abstractmethod
 
 from interfaces import Factory
 from Connection.interfaces import IConnection
+from Timer.interfaces import ITimerManager
 
 
-class IReactor(metaclass=ABCMeta):
+class IReactor(ITimerManager):
 
     @abstractmethod
     def get_acceptor(self):
@@ -23,16 +24,6 @@ class IReactor(metaclass=ABCMeta):
     def poll(self):
         ...
 
-
-class IReactorManager(metaclass=ABCMeta):
-
-    @abstractmethod
-    def set_loop(self, loop: IReactor):
-        ...
-
-    @abstractmethod
-    def get_loop(self):
-        ...
 
 class IAcceptor(metaclass=ABCMeta):
 
