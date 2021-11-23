@@ -47,6 +47,7 @@ class ITimer(metaclass=ABCMeta):
     def is_event_can_active(self):
         ...
 
+
 class ITimerManager(metaclass=ABCMeta):
 
     @abstractmethod

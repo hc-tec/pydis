@@ -25,7 +25,7 @@ def main():
     args = parse_args()
     reactor = Reactor(args.host, args.port)
     server.set_loop(reactor)
-    server.set_host(args.host, args.port)
+    server.set_addr(args.host, args.port)
     server.start_watchdog()
     while True:
         reactor.poll()

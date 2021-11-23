@@ -24,6 +24,28 @@ class IEnable(metaclass=ABCMeta):
         ...
 
 
+class ISyncAble(metaclass=ABCMeta):
+
+    @abstractmethod
+    def get_sync(self):
+        ...
+
+    @abstractmethod
+    def sync_enable(self):
+        ...
+
+    @abstractmethod
+    def sync_disable(self):
+        ...
+
+
+class IClosable(metaclass=ABCMeta):
+
+    @abstractmethod
+    def close(self):
+        ...
+
+
 class IBufferManager(metaclass=ABCMeta):
 
     @abstractmethod
