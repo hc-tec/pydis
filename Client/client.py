@@ -1,104 +1,107 @@
 
-from collections import deque
-from typing import Optional
 
+from typing import Optional
+from socket import socket
+
+from interfaces import IClosable
 from Client.base import CLIENT_FLAG
-from Client.interfaces import IResponse
+from Client.interfaces import IResponse, IClientHandler, IClient
+from Client.handler import BaseHandler
 from Connection import Connection
-from Connection.interfaces import IClosable
+from Connection.interfaces import IConnection
 from Protocol import RESProtocol
-from Database.database import Database
-from Command.base import CommandType
+from Database.interfaces import IDatabase
+
 from Command.handler import CommandHandler
 from Command.interfaces import ICommand, ICommandCaller, ICommandManager
 from Generic.time import get_cur_time
 from Replication.base import REPL_SLAVE_STATE
-from Pubsub.channel import Channel
+
 from Generic.patterns.observer import Observer
 from Generic.decoration import alias
 
+from IOLoop.reader import Reader
+from IOLoop.writer import Writer
+from IOLoop.interfaces import IReader, IWriter
+from Pubsub.channel import Channel
+from Pubsub.manager import PubsubClientManager
+from Pubsub.interfaces import IPubsubClientManager
+from Replication.manager import ReplClientManager
+from Replication.interfaces import IReplClientManager
+from Server.interfaces import IServer
+from Transaction.manager import TransactionManager
+from Transaction.interfaces import ITransactionManager
 
-class Client(
-    Observer,
-    ICommandCaller,
-    ICommandManager,
-    IResponse,
-    IClosable
-):
-    def __init__(self, server, client_id: int, db: Database, conn: Connection):
-        self.server = server
-        self.id = client_id
-        self.conn = conn
-        self.db = db
+
+class Client(IClient):
+
+    def __init__(self, server: IServer, client_id: int, db: IDatabase, sock: socket):
+        self._server = server
+        self._id = client_id
+        self._db = db
+        self._conn = Connection(sock)
+        self._reader = Reader()
+        self._writer = Writer()
+        self._handler: IClientHandler = BaseHandler()
+        self._repl_manager = ReplClientManager()
 
         self.flag = CLIENT_FLAG.MASTER
 
-        self.query_buffer = ''
-        self.query_cursor = 0
-        self.read_data = ''
 
         self.current_command: Optional[ICommand] = None
         self.create_time = get_cur_time()
         self.last_interaction = None
         self.authenticated = True
 
-        # Replication
-        self.repl_state = REPL_SLAVE_STATE.NONE
-        self.repl_ack_time = None
-        # (host, port), used in master keepalive system
-        self.host_as_slave = None
-        self.port_as_slave = None
+        self._transaction_manager = TransactionManager()
+        self._pubsub_manager = PubsubClientManager()
 
-        # multi
-        self.ms_state = deque() # command queue
 
-        self.watch_keys = []
-        self.pubsub_channels = set()
-        self.pubsub_patterns = []
+    def get_database(self) -> IDatabase:
+        return self._db
 
-        self.reply_buffer = deque()
+    def get_connection(self) -> IConnection:
+        return self._conn
 
-    def get_connection(self):
-        return self.conn
+    def get_reader(self) -> IReader:
+        return self._reader
 
-    @staticmethod
-    def is_slave_connected(cls):
-        return cls.repl_state == REPL_SLAVE_STATE.CONNECTED
+    def get_writer(self) -> IWriter:
+        return self._writer
 
-    def is_command_input_end(self):
-        print(self.query_buffer)
-        return self.query_buffer.endswith('\n')
+    def get_handler(self) -> IClientHandler:
+        return self._handler
 
-    def read_from_conn(self):
-        raw_read_data = self.conn.handle_read()
-        self.query_buffer += raw_read_data
-        if self.is_command_input_end():
-            self.query_cursor += len(self.query_buffer)
-            self.read_data = RESProtocol(self.query_buffer).parse()
-            self.query_buffer = ''
-            self.query_cursor = 0
+    def get_repl_manager(self) -> IReplClientManager:
+        return self._repl_manager
+
+    def get_transaction_manager(self) -> ITransactionManager:
+        return self._transaction_manager
+
+    def get_pubsub_manager(self) -> IPubsubClientManager:
+        return self._pubsub_manager
+
+    def transform_handler(self, handler: IClientHandler):
+        self._handler = handler
 
     def read_from_client(self):
-        self.read_from_conn()
-        read_data = self.read_data
+        read_data = self._reader.read_from_conn(self._conn)
         if not read_data: return
-        self.slave_check(read_data)
-        self.handle_command(read_data)
-        self.conn.enable_write()
-        self.read_data = ''
+        self._handler.data_received(read_data, client=self)
 
     def write_to_client(self) -> int:
-        while len(self.reply_buffer):
-            data = self.reply_buffer.pop()
-            if not self.conn.handle_write(data):
-                self.flag = CLIENT_FLAG.CLOSE_ASAP
-                self.close()
-                return 0
-            self.conn.enable_read()
-        return 1
+        res = self._writer.write_to_client(self._conn)
+        if res == 0:
+            self.flag = CLIENT_FLAG.CLOSE_ASAP
+            self.close()
+        return res
 
     def append_reply(self, reply):
-        self.reply_buffer.appendleft(reply)
+        self._writer.append_reply(reply)
+
+    def append_reply_enable_write(self, reply):
+        self._writer.append_reply(reply)
+        self._conn.enable_write()
 
     def handle_command_after_resp(self, cmd_data):
         cmd_data = RESProtocol(cmd_data).parse()
@@ -107,71 +110,23 @@ class Client(
     def handle_command(self, cmd_data):
         handler = CommandHandler(self, cmd_data)
         handler.handle()
-        if self.reply_buffer:
-            self.conn.enable_write()
-    # def switch_database(self, db_index):
-    #     self.db = server.get_database(db_index)
+        if not self._writer.is_reply_empty():
+            self._conn.enable_write()
+    # def switch_IDatabase(self, db_index):
+    #     self.db = server.get_IDatabase(db_index)
     #
-    def get_server(self):
-        return self.server
+    def get_server(self) -> IServer:
+        return self._server
 
-    def set_current_command(self, command: ICommand) -> bool:
+    def set_current_command(self, command: Optional[ICommand]) -> bool:
         self.current_command = command
-        if command is None: return False
-
-        if command.cmd_type & CommandType.CMD_WRITE:
-            # write command ++
-            self.server.write_cmd_increment()
-            # AOF buffer
-            self.server.aof_buf.append(command.raw_cmd)
-            # sender write command to connected slaves
-            self.send_write_cmd_to_slave(command.raw_cmd)
-            # watch keys change
-            self.touch_watched_key(command)
-        elif self.server.repl_slave_ro and \
-            command.cmd_type & CommandType.CMD_READ and \
-            self.repl_state == REPL_SLAVE_STATE.NONE:
-            print('readable', command.raw_cmd)
-            if self.slave_handle_command(command):
-                return False
-        return True
-
-    def slave_handle_command(self, command: ICommand) -> bool:
-        slave = self.server.select_slave()
-        if slave:
-            slave.origin_cmd_sender = self
-            slave.append_reply(f'{command.raw_cmd}\n')
-            slave.conn.enable_write()
-            return True
-        return False
-
-    def send_write_cmd_to_slave(self, cmd_data):
-        slaves = self.server.get_connected_slaves()
-        for slave in slaves:
-            slave.append_reply(f'{cmd_data}\n')
-            slave.conn.enable_write()
-
-    def slave_check(self, read_data):
-        if read_data.startswith('REPLCONF listening-port'.lower()):
-            self.repl_state = REPL_SLAVE_STATE.RECEIVE_PORT
-            self.server.upgrade_client_to_master(self)
-        elif read_data.startswith('REPLCONF ip-address'.lower()):
-            self.repl_state = REPL_SLAVE_STATE.RECEIVE_IP
-        elif read_data.startswith('SYNC'.lower()):
-            self.repl_state = REPL_SLAVE_STATE.RECEIVE_PSYNC
-        elif read_data.startswith('(ok)'.lower()):
-            if self.repl_state == REPL_SLAVE_STATE.RECEIVE_PSYNC:
-                self.repl_state = REPL_SLAVE_STATE.TRANSFER
-                print('TRANSFER')
-            elif self.repl_state == REPL_SLAVE_STATE.TRANSFER:
-                self.repl_state = REPL_SLAVE_STATE.CONNECTED
-                print('CONNECTED')
+        return self._handler.command_executed_before(command, self)
 
     def touch_watched_key(self, command: ICommand):
         key = command.raw_cmd.split()[1]
         # if key is watched, changes watching client flag
-        if key in self.db.watch_keys:
-            clients = self.db.watch_keys[key]
+        clients = self._db.withdraw_watch_keys(key)
+        if clients:
             for client in clients:
                 if client.flag & CLIENT_FLAG.CLOSE_ASAP:
                     clients.remove(client)
@@ -184,20 +139,18 @@ class Client(
             channel.detach(self)
             self.close()
             return
-        self.append_reply(f'{channel.message}\n')
-        self.conn.enable_write()
+        self.append_reply_enable_write(f'{channel.message}\n')
 
     def close(self):
-        self.conn.handle_close()
+        self._conn.connect_close()
 
     def __str__(self):
-        print(self.watch_keys)
         return '<{} id={} flag={} repl_state={} repl_ack_time={}>'.format(
             self.__class__.__name__,
-            self.id,
+            self._id,
             self.flag,
-            self.repl_state,
-            self.repl_ack_time,
+            self.get_repl_manager().get_repl_state(),
+            self.get_repl_manager().get_repl_ack_time(),
         )
 
     __repr__ = __str__
