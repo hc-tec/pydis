@@ -9,6 +9,6 @@ class Sync(BaseCommand):
     cmd_type = CommandType.CMD_COMMON
 
     def handle(self, args, kwargs):
-        self.client.server.need_sync = True
+        self.client.get_server().get_repl_master_manager().sync_enable()
         self.client.handle_command_after_resp('bgsave')
         return CMD_RES.OK

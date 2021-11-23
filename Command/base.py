@@ -5,6 +5,7 @@ from typing import Dict, Any, List
 from Conf.command import CMD_RES
 from Command.exception import CommandArgsNumInvalid, NoImplError
 from Command.interfaces import ICommand
+from Client.interfaces import IClient
 
 COMMAND_MIN_ARGS_NUM = 0
 COMMAND_MAX_ARGS_NUM = 9999
@@ -26,8 +27,8 @@ class BaseCommand(ICommand):
     args_order = []
     need_kwargs = True
 
-    def __init__(self, client, raw_cmd):
-        self.client = client
+    def __init__(self, client: IClient, raw_cmd):
+        self.client: IClient = client
         self.raw_cmd = raw_cmd
 
     def check_arg_num(self, arg_len: int) -> bool:

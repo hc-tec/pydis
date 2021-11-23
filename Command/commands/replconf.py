@@ -17,10 +17,10 @@ class ReplConf(BaseCommand):
 
     def handle(self, args, kwargs):
         key_mapping = {
-            'listening-port': 'port_as_slave',
-            'ip-address': 'host_as_slave'
+            'listening-port': '_port_as_slave',
+            'ip-address': '_host_as_slave'
         }
-        setattr(self.client, key_mapping[args[0]], args[1])
+        setattr(self.client.get_repl_manager(), key_mapping[args[0]], args[1])
         # if 'listening-port' in args:
         #     self.client.port_as_slave = args['value']
         # elif 'ip-address' in args:

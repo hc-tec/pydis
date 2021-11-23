@@ -17,14 +17,14 @@ class SlaveOf(BaseCommand):
     cmd_type = CommandType.CMD_COMMON
 
     def handle(self, args, kwargs):
-        server = self.client.server
+        server = self.client.get_server()
         server.master_host = kwargs['host']
         server.master_port = int(kwargs['port'])
         try:
             server.repl_state = REPL_SLAVE_STATE.CONNECT
             slave_conn = socket_connect(server.master_host, server.master_port)
             server.repl_state = REPL_SLAVE_STATE.CONNECTING
-            server.connect_to_master(slave_conn, (server.master_host, server.master_port), self.client)
+            server.connect_to_master(slave_conn, self.client)
             # blocking slaveof command, append command sender to blocking_dict
             return CMD_RES.WAIT
         except TypeError as e:

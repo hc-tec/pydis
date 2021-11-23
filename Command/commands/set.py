@@ -1,6 +1,6 @@
 
 from Command.base import BaseCommand, CommandType
-from Database.database import Database
+from Database.interfaces import IDatabase
 from Timer.event import TimeoutEvent
 from Timer.timestamp import Timestamp
 from Conf.command import CMD_RES
@@ -13,7 +13,7 @@ class Set(BaseCommand):
     cmd_type = CommandType.CMD_WRITE
 
     def handle(self, args, kwargs):
-        db: Database = self.client.db
+        db: IDatabase = self.client.get_database()
         expires_time = kwargs.get('expires_time')
         if expires_time is None:
             db.store(kwargs['key'], kwargs['value'])
@@ -24,7 +24,7 @@ class Set(BaseCommand):
         return CMD_RES.OK
 
     def set_expires_timer(self, key, expires_time):
-        db: Database = self.client.db
+        db: IDatabase = self.client.get_database()
         timestamp = Timestamp(expires_time, 's')
         db.store_expires(key, timestamp.get_time())
         timeout_event = ExpiresKeyRemoveEvent(timestamp)
@@ -44,7 +44,5 @@ class ExpiresKeyRemoveEvent(TimeoutEvent):
         extra_data = self.extra_data
         print('expire event activate')
         client = extra_data['client']
-        db: Database = client.db
-        print(db.expires, db.dict)
+        db: IDatabase = client.db
         db.remove_expires(extra_data['expires_key'])
-        print(db.expires, db.dict)

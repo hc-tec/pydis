@@ -9,5 +9,5 @@ class BgSave(BaseCommand):
     cmd_type = CommandType.CMD_COMMON
 
     def handle(self, args, kwargs):
-        self.client.server.rdb_start()
+        self.client.get_server().start_rdb()
         return CMD_RES.OK

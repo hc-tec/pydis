@@ -1,6 +1,6 @@
 
 from Command.base import BaseCommand, CommandType
-from Database.database import Database
+from Database.interfaces import IDatabase
 
 
 class Get(BaseCommand):
@@ -11,5 +11,5 @@ class Get(BaseCommand):
     cmd_type = CommandType.CMD_READ
 
     def handle(self, args, kwargs):
-        db: Database = self.client.db
+        db: IDatabase = self.client.get_database()
         return db.withdraw(kwargs['key'])

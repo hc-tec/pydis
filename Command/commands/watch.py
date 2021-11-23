@@ -2,7 +2,7 @@
 from typing import Optional, List
 from Command.base import BaseCommand, CommandType
 from Conf.command import CMD_RES
-from Database.database import Database
+from Database.interfaces import IDatabase
 
 
 class Watch(BaseCommand):
@@ -12,14 +12,14 @@ class Watch(BaseCommand):
 
     def handle(self, args, kwargs):
         client = self.client
-        db: Database = self.client.db
+        db: IDatabase = self.client.get_database()
         for key in args:
-            if not key in db.dict: continue
-            client.watch_keys.append((key, db))
-            watch_client_list: Optional[List] = db.watch_keys.get(key)
+            if not db.include(key): continue
+            client.get_transaction_manager().append_to_watch_key((key, db))
+            watch_client_list: Optional[List] = db.withdraw_watch_keys(key)
             if watch_client_list:
                 watch_client_list.append(client)
             else:
-                db.watch_keys[key] = [client]
+                db.store_watch_keys(key, [client])
         print(client)
         return CMD_RES.OK

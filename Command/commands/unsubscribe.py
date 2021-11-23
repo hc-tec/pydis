@@ -18,8 +18,8 @@ class Unsubscribe(BaseCommand):
             Pubsub.unsubscribeAll(self.client)
         for channel_name in args:
             Pubsub.unsubscribe(self.client, channel_name)
-        if not self.client.pubsub_channels:
+        if not self.client.get_pubsub_manager().get_pubsub_channels():
             self.client.flag &= ~CLIENT_FLAG.PUBSUB
-        if self.client.reply_buffer:
-            self.client.conn.enable_write()
+        if not self.client.get_writer().is_reply_empty():
+            self.client.get_connection().enable_write()
         return CMD_RES.WAIT
