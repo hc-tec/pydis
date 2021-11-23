@@ -74,12 +74,15 @@ class RDBManager(IRDBManager):
         ]
         self._dirty = 0
         self._dirty_before_bgsave = get_cur_time()
-        self._rdb_filename = SETTINGS.RDB_FILE
-        self._rdb_compression = False
-        self._rdb_checksum = 0
+        self._filename = SETTINGS.RDB_FILE
+        self._compression = False
+        self._checksum = 0
 
         self._last_save = None
-        self._rdb_save_time_start = 0
+        self._save_time_start = 0
+
+    def get_file_path(self):
+        return self._filename
 
     def get_dirty(self):
         return self._dirty
@@ -98,7 +101,7 @@ class RDBManager(IRDBManager):
         self._dirty_before_bgsave = get_cur_time()
 
     def start(self, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
-        rdb = RDB(self._rdb_filename)
+        rdb = RDB(self._filename)
         rdb.save(persist_manager=persist_manager, db_manager=db_manager)
         self.reset()
 

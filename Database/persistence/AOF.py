@@ -54,6 +54,9 @@ class AOFManager(IAOFManager):
         self._fsync = AOF_FSYNC_TYPE.EVERY_SECOND
         self._rewrite_last_time = get_cur_time()
 
+    def get_file_path(self):
+        return self._filename
+
     def get_buffer(self):
         return self._buffer
 
@@ -69,9 +72,9 @@ class AOFManager(IAOFManager):
     def reset_rewrite_time(self):
         self._rewrite_last_time = get_cur_time()
 
-    def start(self, aof_manager: IAOFManager, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
+    def start(self, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
         aof = AOF(self._filename)
-        aof.save(aof_manager, db_manager, persist_manager)
+        aof.save(self, db_manager, persist_manager)
 
     def is_enable(self):
         return self._enable

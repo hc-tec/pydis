@@ -2,6 +2,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
+from Client.interfaces import IClient
+
 
 class IDatabase(metaclass=ABCMeta):
 
@@ -22,6 +24,10 @@ class IDatabase(metaclass=ABCMeta):
         ...
 
     @abstractmethod
+    def include(self, key) -> bool:
+        ...
+
+    @abstractmethod
     def store_expires(self, key, expires_time):
         ...
 
@@ -31,6 +37,18 @@ class IDatabase(metaclass=ABCMeta):
 
     @abstractmethod
     def remove_expires(self, key):
+        ...
+
+    @abstractmethod
+    def withdraw_watch_keys(self, key) -> List[IClient]:
+        ...
+
+    @abstractmethod
+    def store_watch_keys(self, key, client_list: List[IClient]):
+        ...
+
+    @abstractmethod
+    def del_watch_key(self, key):
         ...
 
 

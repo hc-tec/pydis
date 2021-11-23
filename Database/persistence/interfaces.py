@@ -54,11 +54,15 @@ class IPersistenceMethodManager(IEnable):
         ...
 
     @abstractmethod
-    def start(self, *args, **kwargs):
+    def start(self, db_manager: IDatabaseManager, persist_manager: IPersistenceManager):
         ...
 
     @abstractmethod
     def load_file(self, db_manager: IDatabaseManager):
+        ...
+
+    @abstractmethod
+    def get_file_path(self):
         ...
 
 

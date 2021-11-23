@@ -20,9 +20,12 @@ class IConnection(metaclass=ABCMeta):
     def connect_close(self):
         ...
 
-
-class IClosable(metaclass=ABCMeta):
+    @abstractmethod
+    def enable_read(self):
+        ...
 
     @abstractmethod
-    def close(self):
+    def enable_write(self):
         ...
+
+
