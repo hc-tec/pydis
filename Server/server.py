@@ -1,113 +1,103 @@
 
 
 from socket import socket
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
+from interfaces import ISyncAble
 from Client import Client
-from Connection import Connection
-from IOLoop.Reactor.interfaces import IReactor, IReactorManager
-from Database.interfaces import IRDBCaller, IPersistenceManager, IDatabaseManager
-from Database.database import Database
+from Client.manager import ClientManager
+from Client.interfaces import IClient, IClientHandler
+from Client.handler import SlaveHandler
+from IOLoop.Reactor.interfaces import IReactor
+from Database.interfaces import IDatabaseManager
+from Database.persistence.manager import PersistenceManager
 from Database.persistence.base import PERS_STATUS
-from Database.persistence.RDB import RDB
-from Database.persistence.AOF import AOF, AOF_FSYNC_TYPE
-from Server.exception import DatabaseNotExistError
-from Timer.timer import SaveParam
+from Database.persistence.interfaces import IRDBManager, IAOFManager, IPersistenceManager
+from Database.manager import DatabaseManager
+
 from Timer.timestamp import Timestamp
 from Timer.event import TimeoutEvent
 from Generic.time import get_cur_time
-from Generic.server import generate_uuid
+
 from Generic.file import read_file
 from Conf import app
-from Replication.slave import SlaveClient, REPL_SLAVE_STATE
-from Replication.master import MasterClient
-from Pubsub.channel import Channel
+from Replication.slave import REPL_SLAVE_STATE
+from Replication.manager import ReplServerMasterManager, ReplServerSlaveManager
+from Replication.interfaces import IReplServerMasterManager, IReplServerSlaveManager
+from Pubsub.manager import PubsubServerManager
+from Pubsub.interfaces import IPubsubServerManager
+from Server.interfaces import IServer
 
 
 SETTINGS = app.get_settings()
 
 
-class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager):
+class Server(IServer):
 
     def __init__(self):
-        self.__next_client_id = 1
+
         self.__loop: Optional[IReactor] = None
-        self.__clients: Dict[int, Client] = {}
-        self.__slaves = []
-        self.__monitors = []
-        self.__current_client = None
-        self.__databases: List[Database] = []
+
+        # self.__slaves = []
+        # self.__monitors = []
+
+        self._database_manager = DatabaseManager()
+        self._persistence_manager = PersistenceManager()
+        self._client_manager = ClientManager()
+
+        self._repl_master_manager = ReplServerMasterManager()
+        self._repl_slave_manager = ReplServerSlaveManager()
+
+        self._pubsub_manager = PubsubServerManager()
 
         self.watchdog_run_num = 0
 
         self.host = None
         self.port = None
 
-        # persistence status
-        self.pers_status = PERS_STATUS.NO_WRITE
-
-        # RDB persistence
-        self.rdb_enable = True
-        self.save_params: List[SaveParam] = [
-            SaveParam(900, 1),
-            SaveParam(300, 10),
-            SaveParam(3, 1)
-        ]
-        self.dirty = 0
-        self.dirty_before_bgsave = get_cur_time()
-        self.rdb_filename = SETTINGS.RDB_FILE
-        self.rdb_compression = False
-        self.rdb_checksum = 0
-
-        self.last_save = None
-        self.rdb_save_time_start = 0
 
 
-        # AOF Persistence
-        self.aof_enable = True
-        self.aof_fsync = AOF_FSYNC_TYPE.EVERY_SECOND
-        self.aof_filename = SETTINGS.AOF_FILE
-        self.aof_buf = []
-        self.aof_rewrite_last_time = get_cur_time()
+        self.load_persistence_file()
 
-        # Replication (master)
-        self.repl_id = generate_uuid()
-        self.repl_ping_slave_period = 10 # Master pings the slave every N seconds
-        self.repl_good_slaves_count = 0
-        self.repl_min_slaves_to_write = 0
-        self.repl_min_slaves_max_lag = 10
-        self.repl_slaves: List[Client] = []
-        self.need_sync = False
-        self.repl_slaves_rb_num = -1 # round-robin num repr slave selected index
-
-        # Replication (slave)
-        self.master_host = None
-        self.master_port = None
-        self.master = None
-        self.repl_state = REPL_SLAVE_STATE.NONE
-        self.repl_slave_ro = True
-
-        # Pubsub
-        self.pubsub_channels: Dict[str, Channel] = {}
-        self.pubsub_patterns = {}
-        self.notify_keyspace_events = None
-
-
-        # Configuration
-        self.db_num = 16
-
-        # Limits
-        self.max_clients = 1000
-
-        self.create_databases()
-        self.load_persistent_file()
-
-    def set_host(self, host, port):
+    def set_addr(self, host, port):
         self.host = host
         self.port = port
 
+    def get_addr(self) -> dict:
+        return {
+            'host': self.host,
+            'port': self.port
+        }
+
+    def get_database_manager(self) -> IDatabaseManager:
+        return self._database_manager
+
+    def get_persistence_manager(self) -> IPersistenceManager:
+        return self._persistence_manager
+
+    def get_rdb_manager(self) -> IRDBManager:
+        return self._persistence_manager.get_rdb_manager()
+
+    def get_aof_manager(self) -> IAOFManager:
+        return self._persistence_manager.get_aof_manager()
+
+    def get_repl_master_manager(self) -> IReplServerMasterManager:
+        return self._repl_master_manager
+
+    def get_repl_slave_manager(self) -> IReplServerSlaveManager:
+        return self._repl_slave_manager
+
+    def get_pubsub_manager(self) -> IPubsubServerManager:
+        return self._pubsub_manager
+
+    def load_persistence_file(self):
+        self.get_rdb_manager().load_file(self._database_manager)
+
     def write_cmd_increment(self):
-        self.dirty +=  1
+        self.get_rdb_manager().incr_dirty()
+
+    def incr_watchdog_run_num(self):
+        self.watchdog_run_num += 1
 
     def start_watchdog(self):
         # execute per WATCH_DOG_INTERVAL(ms)
@@ -116,95 +106,48 @@ class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager)
         watchdog_event.set_extra_data(self)
         self.get_loop().create_timeout_event(watchdog_event)
 
-    def create_databases(self):
-        for i in range(self.db_num):
-            self.__databases.append(Database(i))
+    def start_aof(self):
+        self.get_rdb_manager().start(self._database_manager, self._persistence_manager)
 
-    def get_database(self, index=0) -> Database:
-        # default database: db[0]
-        if 0 <= index < self.db_num:
-            return self.__databases[index]
-        raise DatabaseNotExistError(index)
-
-    def get_databases(self):
-        return self.__databases
-
-    @property
-    def next_client_id(self):
-        self.__next_client_id += 1
-        return self.__next_client_id
+    def start_rdb(self):
+        self.get_rdb_manager().start(self._database_manager, self._persistence_manager)
 
     def set_loop(self, loop: IReactor):
         self.__loop = loop
 
-    def get_loop(self):
+    def get_loop(self) -> IReactor:
         return self.__loop
 
-    def connect_from_client(self, conn: socket):
-        connection = Connection(conn)
-        client = Client(self, self.next_client_id, self.get_database(), connection)
-        self.__clients[conn.fileno()] = client
+    def connect_from_client(self, conn: socket) -> IClient:
+        return self._client_manager.connect_from_client(self, self._database_manager.get_database(), conn)
 
-    def connect_to_master(self, conn: socket, addr, slaveof_cmd_sender: Client):
+    def connect_to_master(self, conn: socket, slaveof_cmd_sender: IClient):
+
         self.get_loop().get_acceptor().handle_accept(
             conn.fileno(),
         )
-        connection = Connection(conn)
-        slave = SlaveClient(self, self.next_client_id, self.get_database(), connection, slaveof_cmd_sender=slaveof_cmd_sender)
-        self.master = slave
-        self.__clients[conn.fileno()] = slave
-
+        client = self.connect_from_client(conn)
+        slave_handler = SlaveHandler()
+        slave_handler.set_slaveof_cmd_sender(slaveof_cmd_sender)
+        client.transform_handler(slave_handler)
+        slave_handler.replicate(client)
 
     def read_from_client(self, fd):
-        client = self.__clients[fd]
-        client.read_from_client()
-        return client.get_connection()
+        return self._client_manager.read_from_client(fd)
 
     def write_to_client(self, fd):
-        client = self.__clients[fd]
-        if client.write_to_client() == 0:
-            del self.__clients[fd]
-        return client.get_connection()
+        return self._client_manager.write_to_client(fd)
 
-    def rdb_reset(self):
-        self.dirty = 0
-        self.dirty_before_bgsave = get_cur_time()
 
-    def rdb_start(self):
-        rdb = RDB(self.rdb_filename)
-        rdb.save(self)
-        self.rdb_reset()
 
-    def aof_start(self):
-        aof = AOF(self.aof_filename)
-        aof.save(self)
-
-    def load_persistent_file(self):
-        rdb = RDB(SETTINGS.RDB_FILE)
-        rdb.load(self)
-
-    def load_from_master(self, data):
-        rdb = RDB(None)
-        rdb.load_from_data(self, data)
-
-    def select_slave(self) -> Optional[Client]:
-        if self.repl_slaves:
-            usable_slaves = list(filter(Client.is_slave_connected, self.repl_slaves))
-            self.repl_slaves_rb_num = (self.repl_slaves_rb_num+1) % len(usable_slaves)
-            return usable_slaves[self.repl_slaves_rb_num]
-        return None
-
-    def get_connected_slaves(self) -> List[Client]:
-        return list(filter(Client.is_slave_connected, self.repl_slaves))
-
-    def upgrade_client_to_master(self, client: Client):
+    def upgrade_client_to_master(self, client: IClient):
         print('upgrade')
-        master = MasterClient()
-        # copy from client
-        master.upgrade_from_client(client)
-        self.repl_slaves.append(master)
+        # master = MasterClient()
+        # # copy from client
+        # master.upgrade_from_client(client)
+        self._repl_master_manager.append_slaves(client)
         # replace common client with master client
-        self.__clients[client.conn.get_sock_fd()] = master
+        # self.__clients[client.conn.get_sock_fd()] = master
 
     def EVETY_SECOND(self, second=1):
         # return True when {second}s pass, default 1s
@@ -214,7 +157,7 @@ class Server(IRDBCaller, IPersistenceManager, IDatabaseManager, IReactorManager)
 class ServerWatchDog(TimeoutEvent):
 
     def handle_event(self, reactor):
-        server: Server = self.extra_data
+        server: IServer = self.extra_data
         # print('watch dog')
 
         self.process_persistence(server)
@@ -222,55 +165,66 @@ class ServerWatchDog(TimeoutEvent):
         self.keep_alive_with_slaves(server)
         # restart watchdog when finish execution
         server.start_watchdog()
-        server.watchdog_run_num += 1
+        server.incr_watchdog_run_num()
 
-    def check_persistence_status(self, server):
-        if server.pers_status & PERS_STATUS.WRITED:
+    def check_persistence_status(self, server: IServer):
+        persist_manager = server.get_persistence_manager()
+        repl_master_manager = server.get_repl_master_manager()
+        if persist_manager.get_pers_status() & PERS_STATUS.WRITED:
             print('persistence finish')
-            server.pers_status = PERS_STATUS.NO_WRITE
-            server.last_save = get_cur_time()
+            persist_manager.set_pers_status(PERS_STATUS.NO_WRITE)
+            # server.last_save = get_cur_time()
             # notify client persistence finished
-            if server.need_sync:
+            if repl_master_manager.get_sync():
                 self.sync_with_slaves(server)
 
-    def sync_with_slaves(self, server):
-        rdb_file_data = read_file(server.rdb_filename)
-        for slave in server.repl_slaves:
-            if slave.repl_state == REPL_SLAVE_STATE.TRANSFER:
-                slave.append_reply(rdb_file_data + '\n')
-                slave.conn.enable_write()
-        server.need_sync = False
+    def sync_with_slaves(self, server: IServer):
+        rdb_manager = server.get_rdb_manager()
+        repl_master_manager = server.get_repl_master_manager()
+        rdb_file_data = read_file(rdb_manager.get_file_path())
+        for slave in repl_master_manager.get_slaves():
+            if slave.get_repl_manager().get_repl_state() == REPL_SLAVE_STATE.TRANSFER:
+                slave.append_reply_enable_write(rdb_file_data + '\n')
+        repl_master_manager.sync_disable()
 
-    def process_persistence(self, server: Server):
+    def process_persistence(self, server: IServer):
 
         self.process_rdb(server)
         self.process_aof(server)
 
-    def process_rdb(self, server):
-        if not server.rdb_enable: return
+    def process_rdb(self, server: IServer):
 
-        for save_param in server.save_params:
-            if server.dirty >= save_param.changes and \
-                    get_cur_time() - server.dirty_before_bgsave >= save_param.seconds:
-                server.rdb_start()
+        rdb_manager = server.get_rdb_manager()
+
+        if not rdb_manager.is_enable(): return
+
+        for save_param in rdb_manager.get_save_params():
+            if rdb_manager.get_dirty() >= save_param.changes and \
+                    get_cur_time() - rdb_manager.get_dirty_before_bgsave() >= save_param.seconds:
+                server.start_rdb()
                 break
 
-    def process_aof(self, server):
-        if not server.aof_enable: return
+    def process_aof(self, server: IServer):
+
+        aof_manager = server.get_aof_manager()
+
+        if not aof_manager.is_enable(): return
         if not server.EVETY_SECOND(): return
 
-        if server.aof_buf:
-            server.aof_start()
+        if aof_manager.get_buffer():
+            server.start_aof()
 
-    def keep_alive_with_slaves(self, server):
-        slaves: List[Client] = server.get_connected_slaves()
+    def keep_alive_with_slaves(self, server: IServer):
+        repl_master_manager = server.get_repl_master_manager()
+
+        slaves: List[IClient] = repl_master_manager.get_connected_slaves()
         if not slaves: return
-        if not server.EVETY_SECOND(10): return
+
+        period = repl_master_manager.get_repl_ping_slave_period()
+        if not server.EVETY_SECOND(period): return
         for slave in slaves:
             print(slave)
-            slave.append_reply('PING\n')
-            slave.conn.enable_write()
-
+            slave.append_reply_enable_write('PING\n')
 
 server = Server()
 
