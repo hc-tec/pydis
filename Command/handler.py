@@ -36,7 +36,7 @@ class CommandHandler(ICommandHandler):
                     self.client.append_reply('only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context\n')
                 else:
                     result = command.execute(args)
-                    if result:
+                    if result is not None:
                         self.client.append_reply(f'{result}\n')
 
         except BaseError as e:

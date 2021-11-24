@@ -48,7 +48,7 @@ class BaseCommand(ICommand):
             kwargs = self.parse_args(*args)
         result = self.handle(*args, kwargs)
         if not isinstance(result, CMD_RES):
-            return result or '(nil)'
+            return result if result is not None else '(nil)'
         elif result == CMD_RES.OK:
             return '(ok)'
 

@@ -70,7 +70,7 @@ class RDBManager(IRDBManager):
         self._save_params: List[SaveParam] = [
             SaveParam(900, 1),
             SaveParam(300, 10),
-            SaveParam(3, 1)
+            SaveParam(10, 1)
         ]
         self._dirty = 0
         self._dirty_before_bgsave = get_cur_time()
