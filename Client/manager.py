@@ -6,6 +6,7 @@ from Database.interfaces import IDatabase
 from Connection.interfaces import IConnection
 from Client.client import Client
 from Client.interfaces import IClient
+from Sentinel.handler import SentinelHandler
 from Server.interfaces import IServer
 
 
@@ -27,6 +28,8 @@ class ClientManager():
 
     def connect_from_client(self, server: IServer, database: IDatabase, conn: socket) -> IClient:
         client = Client(server, self.next_client_id, database, conn)
+        if server.is_sentinel_mode():
+            client.transform_handler(SentinelHandler())
         self._clients[conn.fileno()] = client
         return client
 

@@ -8,9 +8,12 @@ from Database.persistence.interfaces import IPersistenceManager, IRDBManager, IA
 from Pubsub.interfaces import IPubsubServerManager
 from Replication.interfaces import IReplServerSlaveManager, IReplServerMasterManager
 from IOLoop.Reactor.interfaces import IReactor
+from Sentinel.interfaces import ISentinelManager
 
 
 class IServer(metaclass=ABCMeta):
+
+    flag = None
 
     @abstractmethod
     def get_loop(self) -> IReactor:
@@ -30,6 +33,14 @@ class IServer(metaclass=ABCMeta):
 
     @abstractmethod
     def set_addr(self, host, port):
+        ...
+
+    @abstractmethod
+    def is_sentinel_mode(self) -> bool:
+        ...
+
+    @abstractmethod
+    def on_sentinel_mode(self):
         ...
 
     @abstractmethod
@@ -65,6 +76,10 @@ class IServer(metaclass=ABCMeta):
         ...
 
     @abstractmethod
+    def get_sentinel_manager(self) -> ISentinelManager:
+        ...
+
+    @abstractmethod
     def load_persistence_file(self):
         ...
 
@@ -89,6 +104,10 @@ class IServer(metaclass=ABCMeta):
         ...
 
     @abstractmethod
+    def connect_from_self(self, conn: socket) -> IClient:
+        ...
+
+    @abstractmethod
     def read_from_client(self, fd):
         ...
 
@@ -101,6 +120,6 @@ class IServer(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def EVETY_SECOND(self, second=1):
+    def EVERY_SECOND(self, second=1):
         ...
 

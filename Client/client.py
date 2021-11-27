@@ -3,26 +3,21 @@
 from typing import Optional
 from socket import socket
 
-from interfaces import IClosable
 from Client.base import CLIENT_FLAG
-from Client.interfaces import IResponse, IClientHandler, IClient
+from Client.interfaces import IClientHandler, IClient
 from Client.handler import BaseHandler
 from Connection import Connection
 from Connection.interfaces import IConnection
-from Protocol import RESProtocol
-from Database.interfaces import IDatabase
-
 from Command.handler import CommandHandler
-from Command.interfaces import ICommand, ICommandCaller, ICommandManager
+from Command.interfaces import ICommand
+from Database.interfaces import IDatabase
 from Generic.time import get_cur_time
-from Replication.base import REPL_SLAVE_STATE
-
 from Generic.patterns.observer import Observer
 from Generic.decoration import alias
-
 from IOLoop.reader import Reader
 from IOLoop.writer import Writer
 from IOLoop.interfaces import IReader, IWriter
+from Protocol import RESProtocol
 from Pubsub.channel import Channel
 from Pubsub.manager import PubsubClientManager
 from Pubsub.interfaces import IPubsubClientManager
@@ -86,7 +81,8 @@ class Client(IClient):
 
     def read_from_client(self):
         read_data = self._reader.read_from_conn(self._conn)
-        if not read_data: return
+        if not read_data or CommandHandler.is_valid_command(read_data): return
+
         self._handler.data_received(read_data, client=self)
 
     def write_to_client(self) -> int:

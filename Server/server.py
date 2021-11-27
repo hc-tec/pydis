@@ -1,13 +1,13 @@
 
 
 from socket import socket
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
-from interfaces import ISyncAble
-from Client import Client
+
 from Client.manager import ClientManager
-from Client.interfaces import IClient, IClientHandler
+from Client.interfaces import IClient
 from Client.handler import SlaveHandler
+from Conf import app, sentinel
 from IOLoop.Reactor.interfaces import IReactor
 from IOLoop.Reactor.event import ReEvent
 from Database.interfaces import IDatabaseManager
@@ -15,19 +15,20 @@ from Database.persistence.manager import PersistenceManager
 from Database.persistence.base import PERS_STATUS
 from Database.persistence.interfaces import IRDBManager, IAOFManager, IPersistenceManager
 from Database.manager import DatabaseManager
-
-from Timer.timestamp import Timestamp
-from Timer.event import TimeoutEvent
 from Generic.time import get_cur_time
-
 from Generic.file import read_file
-from Conf import app
+from Generic.socket import socket_connect
 from Replication.slave import REPL_SLAVE_STATE
 from Replication.manager import ReplServerMasterManager, ReplServerSlaveManager
 from Replication.interfaces import IReplServerMasterManager, IReplServerSlaveManager
 from Pubsub.manager import PubsubServerManager
 from Pubsub.interfaces import IPubsubServerManager
+from Server.base import SERVER_FLAG
 from Server.interfaces import IServer
+from Sentinel.manager import SentinelManager
+from Sentinel.interfaces import ISentinelManager
+from Timer.timestamp import Timestamp
+from Timer.event import TimeoutEvent
 
 
 SETTINGS = app.get_settings()
@@ -36,6 +37,8 @@ SETTINGS = app.get_settings()
 class Server(IServer):
 
     def __init__(self):
+
+        self.flag = SERVER_FLAG.COMMON
 
         self.__loop: Optional[IReactor] = None
 
@@ -50,6 +53,8 @@ class Server(IServer):
         self._repl_slave_manager = ReplServerSlaveManager()
 
         self._pubsub_manager = PubsubServerManager()
+
+        self._sentinel_manager: Optional[ISentinelManager] = None
 
         self.watchdog_run_num = 0
 
@@ -67,6 +72,13 @@ class Server(IServer):
             'host': self.host,
             'port': self.port
         }
+
+    def is_sentinel_mode(self) -> bool:
+        return self.flag & SERVER_FLAG.SENTINEL
+
+    def on_sentinel_mode(self):
+        self.flag |= SERVER_FLAG.SENTINEL
+        self._sentinel_manager = SentinelManager()
 
     def get_database_manager(self) -> IDatabaseManager:
         return self._database_manager
@@ -89,6 +101,9 @@ class Server(IServer):
     def get_pubsub_manager(self) -> IPubsubServerManager:
         return self._pubsub_manager
 
+    def get_sentinel_manager(self) -> ISentinelManager:
+        return self._sentinel_manager
+
     def load_persistence_file(self):
         self.get_rdb_manager().load_file(self._database_manager)
 
@@ -99,8 +114,8 @@ class Server(IServer):
         self.watchdog_run_num += 1
 
     def start_watchdog(self):
-        # execute per WATCH_DOG_INTERVAL(ms)
-        timestamp = Timestamp(SETTINGS.WATCH_DOG_INTERVAL)
+        # execute per WATCH_DOG_CYCLE(ms)
+        timestamp = Timestamp(SETTINGS.WATCH_DOG_CYCLE)
         watchdog_event = ServerWatchDog(timestamp)
         watchdog_event.set_extra_data(self)
         self.get_loop().create_timeout_event(watchdog_event)
@@ -122,13 +137,16 @@ class Server(IServer):
 
     def connect_to_master(self, conn: socket, slaveof_cmd_sender: IClient):
 
-        self.get_loop().get_poller().register(conn.fileno(), ReEvent.RE_WRITABLE)
-        client = self.connect_from_client(conn)
+        client = self.connect_from_self(conn)
         slave_handler = SlaveHandler()
         slave_handler.set_slaveof_cmd_sender(slaveof_cmd_sender)
         client.transform_handler(slave_handler)
         slave_handler.replicate(client)
         self._repl_slave_manager.set_master(client)
+
+    def connect_from_self(self, conn: socket) -> IClient:
+        self.get_loop().get_poller().register(conn.fileno(), ReEvent.RE_WRITABLE)
+        return self.connect_from_client(conn)
 
     def read_from_client(self, fd):
         return self._client_manager.read_from_client(fd)
@@ -137,17 +155,11 @@ class Server(IServer):
         return self._client_manager.write_to_client(fd)
 
     def upgrade_client_to_master(self, client: IClient):
-        print('upgrade')
-        # master = MasterClient()
-        # # copy from client
-        # master.upgrade_from_client(client)
         self._repl_master_manager.append_slaves(client)
-        # replace common client with master client
-        # self.__clients[client.conn.get_sock_fd()] = master
 
-    def EVETY_SECOND(self, second=1):
+    def EVERY_SECOND(self, second=1):
         # return True when {second}s pass, default 1s
-        return self.watchdog_run_num % (1000 * second // SETTINGS.WATCH_DOG_INTERVAL) == 0
+        return self.watchdog_run_num % (1000 * second // SETTINGS.WATCH_DOG_CYCLE) == 0
 
 
 class ServerWatchDog(TimeoutEvent):
@@ -155,7 +167,8 @@ class ServerWatchDog(TimeoutEvent):
     def handle_event(self, reactor):
         server: IServer = self.extra_data
         # print('watch dog')
-
+        if server.is_sentinel_mode():
+            self.sentinel_timer(server)
         self.process_persistence(server)
         self.check_persistence_status(server)
         self.keep_alive_with_slaves(server)
@@ -205,7 +218,7 @@ class ServerWatchDog(TimeoutEvent):
         aof_manager = server.get_aof_manager()
 
         if not aof_manager.is_enable(): return
-        if not server.EVETY_SECOND(): return
+        if not server.EVERY_SECOND(): return
 
         if aof_manager.get_buffer():
             server.start_aof()
@@ -217,10 +230,55 @@ class ServerWatchDog(TimeoutEvent):
         if not slaves: return
 
         period = repl_master_manager.get_repl_ping_slave_period()
-        if not server.EVETY_SECOND(period): return
+        if not server.EVERY_SECOND(period): return
         for slave in slaves:
             print(slave)
             slave.append_reply_enable_write('PING\n')
+
+    def sentinel_timer(self, server: IServer):
+        if not (server.flag & SERVER_FLAG.SENTINEL_CONNECT_MASTER):
+            self.connect_with_master(server)
+        self.message_conn_timer(server)
+        self.command_conn_timer(server)
+
+    def sentinel_message_conn(self, master_addr: tuple, server: IServer, sentinel_manager: ISentinelManager):
+        # 消息连接
+        conn = socket_connect(*master_addr)
+        message_conn = server.connect_from_self(conn)
+        sentinel_manager.set_message_connection(message_conn)
+        message_conn.append_reply_enable_write('subscribe __sentinel__:hello\n')
+
+    def sentinel_command_conn(self, master_addr: tuple, server: IServer, sentinel_manager: ISentinelManager):
+        # 命令连接
+        conn = socket_connect(*master_addr)
+        command_conn = server.connect_from_self(conn)
+        sentinel_manager.set_command_connection(command_conn)
+
+    def connect_with_master(self, server: IServer):
+        master_addr = SETTINGS.SENTINEL_MASTER_ADDR
+        sentinel_manager = server.get_sentinel_manager()
+        self.sentinel_message_conn(master_addr, server, sentinel_manager)
+        self.sentinel_command_conn(master_addr, server, sentinel_manager)
+        server.flag |= SERVER_FLAG.SENTINEL_CONNECT_MASTER
+
+    def command_conn_timer(self, server: IServer):
+        sentinel_manager = server.get_sentinel_manager()
+        # info command
+        self.sentinel_command_task(sentinel.COMMAND_CONN_INFO_CYCLE, 'info', sentinel_manager)
+        # ping command
+        self.sentinel_command_task(sentinel.COMMAND_CONN_PING_CYCLE, 'ping', sentinel_manager)
+        # self-info
+        # self.sentinel_command_task(sentinel.COMMAND_CONN_SELF_CYCLE, '', sentinel_manager)
+
+    def message_conn_timer(self, server: IServer):
+        ...
+
+    def sentinel_command_task(self, cycle: int, message: str, sentinel_manager: ISentinelManager):
+        if server.EVERY_SECOND(cycle):
+            connections = sentinel_manager.get_command_connection()
+            for conn in connections:
+                conn.append_reply_enable_write(f'{message}\n')
+
 
 server = Server()
 

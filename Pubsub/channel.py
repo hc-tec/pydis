@@ -13,7 +13,7 @@ class Channel(IChannel):
     def set_subscribe_message(self):
         self.message = f'1) subscribe\n' \
             f'2) {self.channel_name}\n' \
-            f'3) {self.get_observers_num() + 1}\n'
+            f'3) {self.get_observers_num()}\n'
 
     def get_unsubscribe_message(self):
         return f'1) unsubscribe\n' \

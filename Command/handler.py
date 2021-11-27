@@ -18,6 +18,10 @@ class CommandHandler(ICommandHandler):
         self.raw_cmd = cmd_data
         self.cmd_data = cmd_data.split()
 
+    @staticmethod
+    def is_valid_command(cmd_data: str) -> bool:
+        return cmd_data.__contains__('command is not exist')
+
     def is_cmd_exist(self):
         return COMMAND_DICT.get(self.cmd_name)
 
