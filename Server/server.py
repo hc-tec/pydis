@@ -7,6 +7,8 @@ from typing import List, Optional
 from Client.manager import ClientManager
 from Client.interfaces import IClient
 from Client.handler import SlaveHandler
+from Cluster.interfaces import IClusterManager
+from Cluster.manager import ClusterManager
 from Conf import app, sentinel
 from IOLoop.Reactor.interfaces import IReactor
 from IOLoop.Reactor.event import ReEvent
@@ -42,9 +44,6 @@ class Server(IServer):
 
         self.__loop: Optional[IReactor] = None
 
-        # self.__slaves = []
-        # self.__monitors = []
-
         self._database_manager = DatabaseManager()
         self._persistence_manager = PersistenceManager()
         self._client_manager = ClientManager()
@@ -55,6 +54,8 @@ class Server(IServer):
         self._pubsub_manager = PubsubServerManager()
 
         self._sentinel_manager: Optional[ISentinelManager] = None
+
+        self._cluster_manager: IClusterManager = ClusterManager()
 
         self.watchdog_run_num = 0
 
