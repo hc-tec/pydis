@@ -5,6 +5,11 @@ from typing import List
 from Client.interfaces import IClient
 
 
+class ISentinelRedisInstance(metaclass=ABCMeta):
+
+    ...
+
+
 class ISentinelManager(metaclass=ABCMeta):
 
     @abstractmethod

@@ -1,13 +1,21 @@
 
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from Client.interfaces import IClient
-from Sentinel.interfaces import ISentinelManager
+from Generic.utils import generate_uuid
+from Sentinel.interfaces import ISentinelManager, ISentinelRedisInstance
 
 
 class SentinelManager(ISentinelManager):
 
     def __init__(self):
+
+        self._id = generate_uuid()
+        self._current_epoch = 0
+        self._masters: Dict[str, ISentinelRedisInstance] = {}
+        self._announce_ip = None
+        self._announce_port = 0
+
         self.message_connection: Optional[IClient] = None
         self.command_connection: Optional[IClient] = None
         self.message_conn_list: List[IClient] = []
