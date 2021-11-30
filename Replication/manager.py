@@ -6,7 +6,7 @@ from Client.interfaces import IClient
 from Replication.base import REPL_SLAVE_STATE
 from Generic.time import get_cur_time
 from Replication.interfaces import IReplClientManager, IReplServerMasterManager, IReplServerSlaveManager
-from Generic.server import generate_uuid
+from Generic.utils import generate_uuid
 
 
 class ReplClientManager(IReplClientManager):
