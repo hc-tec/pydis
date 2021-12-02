@@ -3,11 +3,11 @@ from typing import List, Tuple
 
 from Client.interfaces import IClient
 from Command.commands import COMMAND_DICT
-from Command.base import BaseCommand
 from Command.exception import CommandNotExist
 from Command.interfaces import ICommandHandler, ICommand
-from Exception.base import BaseError
 from Client.base import CLIENT_FLAG
+from Exception.base import BaseError
+from Protocol.base import REPLY_TYPE, reply_prefix
 
 
 class CommandHandler(ICommandHandler):
@@ -20,7 +20,7 @@ class CommandHandler(ICommandHandler):
 
     @staticmethod
     def is_valid_command(cmd_data: str) -> bool:
-        return cmd_data.__contains__('command is not exist')
+        return cmd_data.startswith(reply_prefix(REPLY_TYPE.ERROR))
 
     def is_cmd_exist(self):
         return COMMAND_DICT.get(self.cmd_name)
@@ -37,14 +37,14 @@ class CommandHandler(ICommandHandler):
                     transaction_manager.append_to_buffer((command, args))
                     self.client.append_reply('QUEUED\n')
                 elif self.is_pubsub_on(command):
-                    self.client.append_reply('only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context\n')
+                    self.client.append_reply('only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context\n', msg_type=REPLY_TYPE.ERROR)
                 else:
                     result = command.execute(args)
                     if result is not None:
                         self.client.append_reply(f'{result}\n')
 
         except BaseError as e:
-            self.client.append_reply(e.get_msg())
+            self.client.append_reply(e.get_msg(), msg_type=REPLY_TYPE.ERROR)
         finally:
             self.client.set_current_command(None)
 

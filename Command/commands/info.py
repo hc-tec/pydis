@@ -5,7 +5,7 @@ from Conf.command import CMD_RES
 
 class Info(BaseCommand):
     need_kwargs = False
-    cmd_type = CommandType.CMD_READ
+    cmd_type = CommandType.CMD_COMMON
 
     def handle(self, args, kwargs):
-        return CMD_RES.OK
+        return self.client.get_server().info()

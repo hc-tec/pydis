@@ -9,6 +9,7 @@ class ReplConf(BaseCommand):
         :key
             listening-port
             ip-address
+            ...
     '''
     args_order = ['key', 'value']
     min_args = 2
@@ -21,8 +22,4 @@ class ReplConf(BaseCommand):
             'ip-address': '_host_as_slave'
         }
         setattr(self.client.get_repl_manager(), key_mapping[args[0]], args[1])
-        # if 'listening-port' in args:
-        #     self.client.port_as_slave = args['value']
-        # elif 'ip-address' in args:
-        #     self.client.host_as_slave = args['value']
         return CMD_RES.OK

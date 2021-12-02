@@ -35,7 +35,6 @@ class Exec(BaseCommand):
 
     def execute_all_commands(self, commands):
         results = ''
-        index = 1
         while len(commands):
             command, args = commands.pop()
             try:
@@ -44,10 +43,9 @@ class Exec(BaseCommand):
                 Discard.discard_transaction(self.client)
                 raise e
             if result:
-                results += f'{index}) {result}\n'
+                results += f'{result}\n'
             else:
-                results += '(nil)\n'
-            index += 1
+                results += 'nil\n'
         return results
 
     def is_watched_key_expired(self, watch_keys: List) -> bool:
