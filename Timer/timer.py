@@ -26,7 +26,8 @@ class Timer(ITimer):
         return float("inf")
 
     def is_event_can_active(self):
-        return abs(self.get_earliest_time()) < 50
+        diff_time = self.get_earliest_time()
+        return diff_time <= 0
 
 
 class SaveParam:
