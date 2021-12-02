@@ -7,7 +7,13 @@ from Client.interfaces import IClient
 
 class ISentinelRedisInstance(metaclass=ABCMeta):
 
-    ...
+    @abstractmethod
+    def modify(self, **kwargs):
+        ...
+
+    @abstractmethod
+    def get_info(self) -> dict:
+        ...
 
 
 class ISentinelManager(metaclass=ABCMeta):
@@ -44,7 +50,9 @@ class ISentinelManager(metaclass=ABCMeta):
     def append_command_connection(self, message_connection: IClient):
         ...
 
-
+    @abstractmethod
+    def build_redis_instance(self, server, info: dict):
+        ...
 
 
 

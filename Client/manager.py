@@ -1,16 +1,16 @@
 
 from socket import socket
-from typing import List, Dict
+from typing import Dict
 
-from Database.interfaces import IDatabase
-from Connection.interfaces import IConnection
 from Client.client import Client
-from Client.interfaces import IClient
+from Client.interfaces import IClient, IClientManager
+from Connection.interfaces import IConnection
+from Database.interfaces import IDatabase
 from Sentinel.handler import SentinelHandler
 from Server.interfaces import IServer
 
 
-class ClientManager():
+class ClientManager(IClientManager):
 
     def __init__(self):
 
@@ -44,5 +44,6 @@ class ClientManager():
             del self._clients[fd]
         return client.get_connection()
 
-
+    def get_client_num(self) -> int:
+        return len(self._clients.keys())
 

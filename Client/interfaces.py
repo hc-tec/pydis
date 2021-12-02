@@ -10,6 +10,7 @@ from Database.interfaces import IDatabase
 
 from Generic.patterns.observer import Observer
 from IOLoop.interfaces import IReader, IWriter
+from Protocol.base import REPLY_TYPE
 from Pubsub.interfaces import IPubsubClientManager
 from Replication.interfaces import IReplClientManager
 # from Server.interfaces import IServer
@@ -83,7 +84,7 @@ class IClient(IClosable, Observer):
         ...
 
     @abstractmethod
-    def append_reply(self, reply):
+    def append_reply(self, reply, msg_type=REPLY_TYPE.SINGLE):
         ...
 
     @abstractmethod
@@ -138,5 +139,21 @@ class ISlaveHandler(IClientHandler):
         ...
 
 
+class IClientManager(metaclass=ABCMeta):
 
+    @abstractmethod
+    def connect_from_client(self, server: IServer, database: IDatabase, conn: socket) -> IClient:
+        ...
+
+    @abstractmethod
+    def read_from_client(self, fd) -> IConnection:
+        ...
+
+    @abstractmethod
+    def write_to_client(self, fd) -> IConnection:
+        ...
+
+    @abstractmethod
+    def get_client_num(self) -> int:
+        ...
 

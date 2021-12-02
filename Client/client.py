@@ -18,6 +18,7 @@ from IOLoop.reader import Reader
 from IOLoop.writer import Writer
 from IOLoop.interfaces import IReader, IWriter
 from Protocol import RESProtocol
+from Protocol.base import REPLY_TYPE, reply_prefix, is_valid_prefix
 from Pubsub.channel import Channel
 from Pubsub.manager import PubsubClientManager
 from Pubsub.interfaces import IPubsubClientManager
@@ -82,7 +83,8 @@ class Client(IClient):
     def read_from_client(self):
         read_data = self._reader.read_from_conn(self._conn)
         if not read_data or CommandHandler.is_valid_command(read_data): return
-
+        if is_valid_prefix(read_data[0]):
+            read_data = read_data[1:]
         self._handler.data_received(read_data, client=self)
 
     def write_to_client(self) -> int:
@@ -92,8 +94,9 @@ class Client(IClient):
             self.close()
         return res
 
-    def append_reply(self, reply):
-        self._writer.append_reply(reply)
+    def append_reply(self, reply, msg_type=REPLY_TYPE.SINGLE):
+        prefix = reply_prefix(msg_type)
+        self._writer.append_reply(f'{prefix}{reply}')
 
     def append_reply_enable_write(self, reply):
         self._writer.append_reply(reply)

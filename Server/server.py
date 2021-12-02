@@ -20,6 +20,7 @@ from Database.manager import DatabaseManager
 from Generic.time import get_cur_time
 from Generic.file import read_file
 from Generic.socket import socket_connect
+from Generic.utils import generate_uuid
 from Replication.slave import REPL_SLAVE_STATE
 from Replication.manager import ReplServerMasterManager, ReplServerSlaveManager
 from Replication.interfaces import IReplServerMasterManager, IReplServerSlaveManager
@@ -39,6 +40,9 @@ SETTINGS = app.get_settings()
 class Server(IServer):
 
     def __init__(self):
+
+        self._id = generate_uuid()
+        self._create_time = get_cur_time()
 
         self.flag = SERVER_FLAG.COMMON
 
@@ -162,6 +166,30 @@ class Server(IServer):
         # return True when {second}s pass, default 1s
         return self.watchdog_run_num % (1000 * second // SETTINGS.WATCH_DOG_CYCLE) == 0
 
+    def info(self, section=None):
+        server = f'''redis_version: {SETTINGS.__version__}
+run_id: {self._id}
+tcp_ip: {self.host}
+tcp_port: {self.port}
+uptime_in_seconds: {(get_cur_time() - self._create_time) // 1000}
+'''
+        slaves_num = self._repl_master_manager.get_slaves_num()
+        clients = f'''
+connected_clients: {self._client_manager.get_client_num() - slaves_num}
+client_longest_output_list: 1
+client_longest_input_buf: 1
+blocked_clients: 1
+'''
+        role = 'master' if self._repl_slave_manager.get_master() is None else 'slave'
+
+        replication = f'''
+role: {role}
+connected_slaves: {slaves_num}
+{self._repl_master_manager.get_slaves_host()}
+'''
+        return server + clients + replication
+
+
 
 class ServerWatchDog(TimeoutEvent):
 
@@ -233,7 +261,6 @@ class ServerWatchDog(TimeoutEvent):
         period = repl_master_manager.get_repl_ping_slave_period()
         if not server.EVERY_SECOND(period): return
         for slave in slaves:
-            print(slave)
             slave.append_reply_enable_write('PING\n')
 
     def sentinel_timer(self, server: IServer):
@@ -242,24 +269,11 @@ class ServerWatchDog(TimeoutEvent):
         self.message_conn_timer(server)
         self.command_conn_timer(server)
 
-    def sentinel_message_conn(self, master_addr: tuple, server: IServer, sentinel_manager: ISentinelManager):
-        # 消息连接
-        conn = socket_connect(*master_addr)
-        message_conn = server.connect_from_self(conn)
-        sentinel_manager.set_message_connection(message_conn)
-        message_conn.append_reply_enable_write('subscribe __sentinel__:hello\n')
-
-    def sentinel_command_conn(self, master_addr: tuple, server: IServer, sentinel_manager: ISentinelManager):
-        # 命令连接
-        conn = socket_connect(*master_addr)
-        command_conn = server.connect_from_self(conn)
-        sentinel_manager.set_command_connection(command_conn)
-
     def connect_with_master(self, server: IServer):
         master_addr = SETTINGS.SENTINEL_MASTER_ADDR
         sentinel_manager = server.get_sentinel_manager()
-        self.sentinel_message_conn(master_addr, server, sentinel_manager)
-        self.sentinel_command_conn(master_addr, server, sentinel_manager)
+        SentinelManager.sentinel_message_conn(master_addr, server, sentinel_manager)
+        SentinelManager.sentinel_command_conn(master_addr, server, sentinel_manager)
         server.flag |= SERVER_FLAG.SENTINEL_CONNECT_MASTER
 
     def command_conn_timer(self, server: IServer):
