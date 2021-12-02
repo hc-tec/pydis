@@ -1,6 +1,8 @@
 
 import os
 
+__version__ = '0.1.0'
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 WATCH_DOG_CYCLE = 100

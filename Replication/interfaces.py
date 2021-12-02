@@ -37,11 +37,23 @@ class IReplClientManager(IReplState):
     def set_addr_when_slave(self, host, port):
         ...
 
+    @abstractmethod
+    def get_host_when_slave(self) -> str:
+        ...
+
 
 class IReplServerMasterManager(ISyncAble):
 
     @abstractmethod
     def select_slave(self) -> Optional[IClient]:
+        ...
+
+    @abstractmethod
+    def get_slaves_num(self) -> int:
+        ...
+
+    @abstractmethod
+    def get_slaves_host(self) -> str:
         ...
 
     @abstractmethod

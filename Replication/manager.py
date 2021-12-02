@@ -40,6 +40,9 @@ class ReplClientManager(IReplClientManager):
         self._host_as_slave = host
         self._port_as_slave = port
 
+    def get_host_when_slave(self) -> str:
+        return f'{self._host_as_slave} {self._port_as_slave}'
+
 
 class ReplServerMasterManager(IReplServerMasterManager, ISyncAble):
 
@@ -52,7 +55,7 @@ class ReplServerMasterManager(IReplServerMasterManager, ISyncAble):
         self._repl_min_slaves_max_lag = 10
         self._repl_slaves: List[IClient] = []
         self._need_sync = False
-        self._repl_slaves_rb_num = -1  # round-robin num repr slave selected index
+        self._repl_slaves_rb_num = -1
 
     def get_repl_ping_slave_period(self) -> int:
         return self._repl_ping_slave_period
@@ -62,6 +65,15 @@ class ReplServerMasterManager(IReplServerMasterManager, ISyncAble):
 
     def is_slave_connected(self, client: IClient) -> bool:
         return ReplClientManager.is_slave_connected(client.get_repl_manager())
+
+    def get_slaves_num(self) -> int:
+        return len(self._repl_slaves)
+
+    def get_slaves_host(self) -> str:
+        res = ''
+        for slave in self._repl_slaves:
+            res += slave.get_repl_manager().get_host_when_slave() + '\n'
+        return res
 
     def get_slaves(self) -> List[IClient]:
         return self._repl_slaves
