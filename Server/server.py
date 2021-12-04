@@ -174,16 +174,19 @@ tcp_port: {self.port}
 uptime_in_seconds: {(get_cur_time() - self._create_time) // 1000}
 '''
         slaves_num = self._repl_master_manager.get_slaves_num()
+        real_client_num = self._client_manager.get_client_num() - slaves_num
         clients = f'''
-connected_clients: {self._client_manager.get_client_num() - slaves_num}
+connected_clients: {real_client_num}
 client_longest_output_list: 1
 client_longest_input_buf: 1
 blocked_clients: 1
 '''
-        role = 'master' if self._repl_slave_manager.get_master() is None else 'slave'
-
+        master = self._repl_slave_manager.get_master()
+        role = 'master' if master is None else 'slave'
+        replid = master.get_repl_manager().get_repl_id() if master else 'nil'
         replication = f'''
 role: {role}
+replid: {replid}
 connected_slaves: {slaves_num}
 {self._repl_master_manager.get_slaves_host()}
 '''

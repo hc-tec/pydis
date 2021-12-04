@@ -14,11 +14,18 @@ class ReplClientManager(IReplClientManager):
     def __init__(self):
 
         # Replication
+        self._repl_id = None
         self._repl_state = REPL_SLAVE_STATE.NONE
         self._repl_ack_time = None
         # (host, port), used in master keepalive system
         self._host_as_slave = None
         self._port_as_slave = None
+
+    def get_repl_id(self) -> str:
+        return self._repl_id
+
+    def set_repl_id(self, repl_id: str):
+        self._repl_id = repl_id
 
     @staticmethod
     def is_slave_connected(cls: IReplClientManager):

@@ -21,6 +21,14 @@ class IReplState(metaclass=ABCMeta):
 
 class IReplClientManager(IReplState):
 
+    @abstractmethod
+    def get_repl_id(self) -> str:
+        ...
+
+    @abstractmethod
+    def set_repl_id(self, repl_id: str):
+        ...
+
     @staticmethod
     def is_slave_connected(cls):
         ...
