@@ -15,6 +15,14 @@ class ISentinelRedisInstance(metaclass=ABCMeta):
     def get_info(self) -> dict:
         ...
 
+    @abstractmethod
+    def set_master(self, master):
+        ...
+
+    @abstractmethod
+    def get_master(self):
+        ...
+
 
 class ISentinelManager(metaclass=ABCMeta):
 
@@ -51,7 +59,7 @@ class ISentinelManager(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def build_redis_instance(self, server, info: dict):
+    def build_redis_instance(self, client: IClient, info: dict):
         ...
 
 

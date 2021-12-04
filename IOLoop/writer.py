@@ -13,6 +13,14 @@ class Writer(IWriter):
         self._reply_buffer = deque()
 
     def write_to_client(self, conn: IConnection) -> int:
+        # if not len(self._reply_buffer):
+        #     return 1
+        # data = self._reply_buffer.pop()
+        # if not conn.ready_to_write(data):
+        #     return 0
+        # if not len(self._reply_buffer):
+        #     conn.enable_read()
+        # return 1
         while len(self._reply_buffer):
             data = self._reply_buffer.pop()
             if not conn.ready_to_write(data):

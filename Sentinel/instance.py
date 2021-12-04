@@ -1,5 +1,5 @@
 
-from typing import Dict
+from typing import Dict, Optional
 
 from Generic.time import get_cur_time
 from Sentinel.interfaces import ISentinelRedisInstance
@@ -30,6 +30,7 @@ class SentinelRedisInstance(ISentinelRedisInstance):
         self._sentinels = {}
         self._slaves: Dict[str, ISentinelRedisInstance] = {}
 
+        self._master: Optional[ISentinelRedisInstance] = None
         self._slave_master_host = None
         self._slave_master_port = 0
 
@@ -52,6 +53,12 @@ class SentinelRedisInstance(ISentinelRedisInstance):
 
     def get_info(self) -> dict:
         return self._info
+
+    def set_master(self, master: ISentinelRedisInstance):
+        self._master = master
+
+    def get_master(self) -> ISentinelRedisInstance:
+        return self._master
 
     def __str__(self):
         return '<{} run_id={}>'.format(

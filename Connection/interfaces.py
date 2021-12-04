@@ -9,6 +9,10 @@ class IConnection(metaclass=ABCMeta):
         ...
 
     @abstractmethod
+    def get_sock_fd(self):
+        ...
+
+    @abstractmethod
     def data_received(self) -> str:
         ...
 

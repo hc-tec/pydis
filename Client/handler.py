@@ -1,10 +1,13 @@
 
 
+from Command.base import CommandType
+from Command.commands.info import Info
 from Command.interfaces import ICommand
 from Client.interfaces import IClientHandler, IClient, IMasterHandler, ISlaveHandler
 from Replication.base import REPL_SLAVE_STATE
-from Command.base import CommandType
 from Replication.interfaces import IReplClientManager, IReplServerSlaveManager
+from Timer.event import TimeoutEvent
+from Timer.timestamp import Timestamp
 
 
 class BaseHandler(IClientHandler):
@@ -135,6 +138,11 @@ class SlaveHandler(BaseHandler, ISlaveHandler):
         if repl_state == REPL_SLAVE_STATE.CONNECTED:
             if client == repl_slave_manager.get_master():
                 print('slave handle command from master: ', data)
+            if data.startswith('redis_version'):
+                master: IClient = repl_slave_manager.get_master()
+                info = Info.parse_info(data)
+                master.get_repl_manager().set_repl_id(info['run_id'])
+                return
             self.handle_command(data, client)
             return
         self.check_master_reply(data, client)
@@ -190,10 +198,22 @@ class SlaveHandler(BaseHandler, ISlaveHandler):
         elif self.is_persistence_data(read_data):
             server.get_rdb_manager().load_from_master(server.get_database_manager(), read_data)
             repl_manager.set_repl_state(REPL_SLAVE_STATE.CONNECTED)
+            master = server.get_repl_slave_manager().get_master()
+            master.append_reply_enable_write('(ok)\n')
 
-            server.get_repl_slave_manager().get_master().append_reply_enable_write('(ok)\n')
+            event = SlaveSendInfoEvent(Timestamp(2, 's'))
+            event.set_extra_data(master)
+            server = client.get_server()
+            reactor = server.get_loop()
+            reactor.create_timeout_event(event)
+
             # tell slaveof command sender all works are finish
             self._slaveof_cmd_sender.append_reply_enable_write('(ok)\n')
             self._slaveof_cmd_sender = None
 
 
+class SlaveSendInfoEvent(TimeoutEvent):
+
+    def handle_event(self, reactor):
+        master: IClient = self.extra_data
+        master.append_reply_enable_write('info\n')

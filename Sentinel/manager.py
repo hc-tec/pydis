@@ -16,8 +16,10 @@ class SentinelManager(ISentinelManager):
         self._id = generate_uuid()
         self._current_epoch = 0
         self._masters: Dict[str, ISentinelRedisInstance] = {}
+        self._slaves: Dict[str, ISentinelRedisInstance] = {}
         self._announce_ip = None
         self._announce_port = 0
+        self._run_id_map: Dict[int, str] = {} # fd -> run_id mapping
 
         self.message_connection: Optional[IClient] = None
         self.command_connection: Optional[IClient] = None
@@ -65,7 +67,10 @@ class SentinelManager(ISentinelManager):
         command_conn = server.connect_from_self(conn)
         sentinel_manager.set_command_connection(command_conn)
 
-    def build_redis_instance(self, server, info: dict):
+    def build_redis_instance(self, client: IClient, info: dict):
+        server = client.get_server()
+        self._run_id_map[client.get_connection().get_sock_fd()] = info['run_id']
+
         instance = self._masters.get(info['run_id'])
         if not instance:
             build_func = getattr(self, f'_build_{info["role"]}_redis_instance')
@@ -83,7 +88,9 @@ class SentinelManager(ISentinelManager):
 
     def _build_slave_redis_instance(self, server, info: dict):
         instance = SentinelRedisInstance(info=info, **info)
-        self._masters[info['run_id']] = instance
+        self._slaves[info['run_id']] = instance
+        master = self._masters[info['replid']]
+        instance.set_master(master)
 
     def _modify_master_redis_instance(self, server, instance: ISentinelRedisInstance, info: dict):
         instance.modify(info=info, **info)
