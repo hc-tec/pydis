@@ -37,7 +37,7 @@ Default_Poller_Factory = PollerFactory()
 Default_Acceptor_Factory = AcceptorFactory()
 
 
-class Reactor(IReactor, ITimerManager):
+class Reactor(IReactor):
 
     def __init__(self,
                  host,

@@ -15,8 +15,7 @@ class Pubsub:
             channel = Channel(channel_name)
             pubsub_server_manager.subscribe(channel_name, channel)
         channel.attach(client)
-        channel.set_subscribe_message()
-        channel.notify()
+        channel.notify(channel, channel.get_subscribe_message())
 
     @staticmethod
     def unsubscribe(client: IClient, channel_name: str):
@@ -44,6 +43,5 @@ class Pubsub:
         channel = pubsub_server_manager.get_channel(channel_name)
         if not channel:
             raise ChannelIsNotExistError(channel_name)
-        channel.set_publish_message(message)
-        channel.notify()
+        channel.notify(channel, channel.get_publish_message(message))
         return channel.get_observers_num()

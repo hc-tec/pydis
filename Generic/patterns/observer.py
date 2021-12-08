@@ -6,7 +6,7 @@ from abc import abstractmethod
 class AbstractObserver:
 
     @abstractmethod
-    def update(self, subject): ...
+    def update(self, *args, **kwargs): ...
 
 
 class AbstractSubject:
@@ -18,12 +18,12 @@ class AbstractSubject:
     def detach(self, observer: AbstractObserver): ...
 
     @abstractmethod
-    def notify(self): ...
+    def notify(self, *args, **kwargs): ...
 
 
 class Observer(AbstractObserver):
 
-    def update(self, subject: AbstractSubject):
+    def update(self, *args, **kwargs):
         pass
 
 
@@ -38,6 +38,6 @@ class Subject(AbstractSubject):
     def detach(self, observer: Observer):
         self._observers.remove(observer)
 
-    def notify(self):
+    def notify(self, *args, **kwargs):
         for observer in self._observers:
-            observer.update(self)
+            observer.update(*args, **kwargs)

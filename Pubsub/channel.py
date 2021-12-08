@@ -8,10 +8,9 @@ class Channel(IChannel):
     def __init__(self, channel_name: str):
         super().__init__()
         self.channel_name = channel_name
-        self.message = self.set_subscribe_message()
 
-    def set_subscribe_message(self):
-        self.message = f'subscribe\n' \
+    def get_subscribe_message(self):
+        return f'subscribe\n' \
             f'{self.channel_name}\n' \
             f'{self.get_observers_num()}\n'
 
@@ -20,8 +19,8 @@ class Channel(IChannel):
             f'{self.channel_name}\n' \
             f'{self.get_observers_num()}\n'
 
-    def set_publish_message(self, message):
-        self.message = f'message\n' \
+    def get_publish_message(self, message):
+        return f'message\n' \
                         f'{self.channel_name}\n' \
                         f'{message}\n'
 

@@ -51,7 +51,7 @@ class ReplClientManager(IReplClientManager):
         return f'{self._host_as_slave} {self._port_as_slave}'
 
 
-class ReplServerMasterManager(IReplServerMasterManager, ISyncAble):
+class ReplServerMasterManager(IReplServerMasterManager):
 
     def __init__(self):
         # Replication (master)

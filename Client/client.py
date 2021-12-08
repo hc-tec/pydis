@@ -133,12 +133,12 @@ class Client(IClient):
                 client.flag |= CLIENT_FLAG.DIRTY_CAS
 
     @alias(Observer, 'update')
-    def receive_notice_from_subscribe_channel(self, channel: Channel):
+    def receive_notice_from_subscribe_channel(self, channel: Channel, message: str):
         if self.flag & CLIENT_FLAG.CLOSE_ASAP:
             channel.detach(self)
             self.close()
             return
-        self.append_reply_enable_write(f'{channel.message}\n')
+        self.append_reply_enable_write(f'{message}\n')
 
     def close(self):
         self._conn.connect_close()
